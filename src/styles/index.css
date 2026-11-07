@@ -292,6 +292,19 @@ dialog.sheet::backdrop {
   }
 }
 
+/* Kitchen display on the dashboard: everything scales up from the root size and the screen's chrome steps aside. */
+html[data-kitchen="on"] {
+  font-size: 125%;
+}
+html[data-kitchen="on"] [data-chrome] {
+  display: none !important;
+}
+html[data-kitchen="on"] main#main {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

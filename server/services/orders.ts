@@ -9,16 +9,17 @@ import type {
 } from '../../shared/types'
 import { db, inTransaction } from '../db'
 import { applyDiscounts, type DiscountResult } from '../domain/discounts'
-import { applyAction, initialState } from '../domain/orderMachine'
+import { applyAction, applyCancel, initialState } from '../domain/orderMachine'
 import { OrderError, priceOrder, type PricedOrder } from '../domain/pricing'
-import { quoteNewOrder } from '../domain/queue'
+import { forecastScheduled, quoteNewOrder } from '../domain/queue'
 import { pos } from '../pos'
 import { publishChange } from '../realtime'
-import { awardForOrder, balances, recordRedeem, resolveReward } from './loyalty'
+import { awardForOrder, balances, recordRedeem, recordRefund, resolveReward } from './loyalty'
 import { loadPricingItems } from './menu'
-import { consumeCode, resolveCode, type ResolvedCode } from './promotions'
+import { consumeCode, releaseCode, resolveCode, type ResolvedCode } from './promotions'
 import { businessDate, getSettings } from './settings'
-import { getOrderForUser, getOrderRow, getStaffOrder, loadQueueEntries } from './views'
+import { validateSlot } from './slots'
+import { getOrderForUser, getOrderRow, getStaffOrder, loadQueueEntries, loadScheduledEntries } from './views'
 
 /** The most orders one customer can have in progress at once. Stops a runaway client flooding the queue. */
 const MAX_OPEN_ORDERS_PER_CUSTOMER = 5
@@ -30,6 +31,8 @@ interface Plan {
   code: ResolvedCode | null
   notices: string[]
 }
+
+type PlanInput = Pick<CreateOrderInput, 'lines' | 'rewardId' | 'code'>
 
 function priceLines(lines: OrderLineInput[]): PricedOrder {
   const items = loadPricingItems(lines.flatMap((l) => (l.itemId != null ? [l.itemId] : [])))
@@ -43,7 +46,7 @@ function priceLines(lines: OrderLineInput[]): PricedOrder {
  * When `strict` is false (quotes) a code or reward that cannot be used becomes a friendly notice and
  * the rest of the quote stands. When it is true (placing the order) the same problem is an error.
  */
-function planOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' | 'rewardId' | 'code'>, strict: boolean): Plan {
+function planOrder(userId: number | null, input: PlanInput, strict: boolean): Plan {
   const priced = priceLines(input.lines)
   const notices: string[] = []
   let reward: RewardDef | null = null
@@ -81,10 +84,33 @@ function planOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' 
 }
 
 /** What the order would cost and how long it would take, without placing it. */
-export function quoteOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' | 'rewardId' | 'code'>): QuoteResponse {
+export function quoteOrder(userId: number | null, input: PlanInput & { pickupAt?: string }): QuoteResponse {
   const plan = planOrder(userId, input, false)
   const settings = getSettings()
-  const info = quoteNewOrder(plan.priced.prepSeconds, loadQueueEntries(), settings.baristas, Date.now())
+  const nowMs = Date.now()
+  const queue = loadQueueEntries()
+  let { ahead, etaSeconds } = quoteNewOrder(plan.priced.prepSeconds, queue, settings.baristas, nowMs)
+  let readyAt: string | null = null
+
+  if (input.pickupAt) {
+    try {
+      const pickup = validateSlot(input.pickupAt, nowMs)
+      const prepMs = plan.priced.prepSeconds * 1000
+      const forecast = forecastScheduled(
+        { id: Number.MAX_SAFE_INTEGER, pickupAtMs: pickup.getTime(), dueAtMs: pickup.getTime() - prepMs, prepSeconds: plan.priced.prepSeconds },
+        queue,
+        loadScheduledEntries(),
+        settings.baristas,
+        nowMs,
+      )
+      ahead = forecast.ahead
+      etaSeconds = Math.round((forecast.readyAtMs - nowMs) / 1000)
+      readyAt = new Date(Math.max(forecast.readyAtMs, pickup.getTime())).toISOString()
+    } catch (error) {
+      if (!(error instanceof OrderError)) throw error
+      plan.notices.push(error.message)
+    }
+  }
 
   let pointsToEarn = 0
   if (userId != null) {
@@ -109,9 +135,9 @@ export function quoteOrder(userId: number | null, input: Pick<CreateOrderInput, 
     passUnits: 0,
     totalFils: plan.discounts.totalFils,
     pointsToEarn,
-    ahead: info.ahead,
-    etaSeconds: info.etaSeconds,
-    readyAt: null,
+    ahead,
+    etaSeconds,
+    readyAt,
     notices: plan.notices,
   }
 }
@@ -121,7 +147,8 @@ export function quoteOrder(userId: number | null, input: Pick<CreateOrderInput, 
  *
  * Prices come from the menu in the database, never from the client. A card order is paid at once
  * (the card form in the app is a prototype and sends no card data), so it goes straight into the
- * queue. A cash order waits at the payment step until staff accept payment.
+ * queue, or onto the Scheduled lane when it is a pre-order that is not due to start yet. A cash order
+ * waits at the payment step until staff accept payment.
  */
 export async function createOrder(
   customer: { id: number; firstName: string },
@@ -143,22 +170,32 @@ export async function createOrder(
 
     const plan = planOrder(customer.id, input, true)
     const { priced, discounts, reward, code } = plan
+    const nowMs = Date.now()
+    const nowIso = new Date(nowMs).toISOString()
+
+    // A pre-order is checked against the slot rules inside the same transaction that saves it, so two
+    // people can never take the last place in a slot at once.
+    const pickup = input.pickupAt ? validateSlot(input.pickupAt, nowMs) : null
+    const dueMs = pickup ? pickup.getTime() - priced.prepSeconds * 1000 : null
+    const scheduled = dueMs != null && dueMs > nowMs
+
     if (code && !consumeCode(code.id)) throw new OrderError('That code has been used up.', 'code_used_up', 409)
-    const state = initialState(input.paymentMethod)
-    const nowIso = new Date().toISOString()
-    const date = businessDate(new Date(), settings.timezone)
+    const state = initialState(input.paymentMethod, scheduled)
+    const date = businessDate(new Date(nowMs), settings.timezone)
     const { next } = db
       .prepare('SELECT COALESCE(MAX(number), 0) + 1 AS next FROM orders WHERE business_date = ?')
       .get(date) as { next: number }
-    const confirmed = state.status === 'queued' ? nowIso : null
+    const paidNow = state.paymentStatus === 'paid'
+    // Queue key: when a paid order takes its place in the queue. A pre-order takes it when it is due to start.
+    const queueAt = paidNow ? (scheduled && dueMs != null ? new Date(dueMs).toISOString() : nowIso) : null
 
     const { lastInsertRowid } = db
       .prepare(
         `INSERT INTO orders (business_date, number, user_id, customer_name, fulfilment, table_number,
                              payment_method, payment_status, status, subtotal_fils, total_fils,
                              code, code_fils, reward_id, reward_points, reward_fils, prep_seconds,
-                             created_at, confirmed_at, queue_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                             created_at, confirmed_at, queue_at, pickup_at, due_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         date,
@@ -179,8 +216,10 @@ export async function createOrder(
         discounts.rewardFils,
         priced.prepSeconds,
         nowIso,
-        confirmed,
-        confirmed,
+        paidNow ? nowIso : null,
+        queueAt,
+        pickup ? pickup.toISOString() : null,
+        dueMs != null ? new Date(dueMs).toISOString() : null,
       )
     const orderId = Number(lastInsertRowid)
 
@@ -250,13 +289,6 @@ export async function createOrder(
   return view
 }
 
-const COLUMN_UPDATES: Record<OrderAction, string> = {
-  accept_payment: `payment_status = 'paid', status = 'queued', confirmed_at = @at, queue_at = @at`,
-  start: `status = 'preparing', started_at = @at`,
-  ready: `status = 'ready', ready_at = @at, was_late = @late`,
-  collect: `status = 'collected', collected_at = @at`,
-}
-
 const EVENT_STATUS: Record<OrderAction, string> = {
   accept_payment: 'queued',
   start: 'preparing',
@@ -274,25 +306,45 @@ export async function transitionOrder(
     const row = getOrderRow(orderId)
     if (!row) throw new OrderError('Order not found.', 'not_found', 404)
 
-    const result = applyAction({ status: row.status, paymentStatus: row.payment_status }, action)
-    if (!result.ok) throw new OrderError(result.message, result.code, 409)
-
     const settings = getSettings()
     const atMs = Date.now()
     const at = new Date(atMs).toISOString()
-    const queueAt = Date.parse(row.queue_at ?? row.confirmed_at ?? row.created_at)
-    const late = (atMs - queueAt) / 1000 > settings.lateAfterSeconds ? 1 : 0
+    const dueMs = row.due_at ? Date.parse(row.due_at) : null
+    const dueInFuture = dueMs != null && dueMs > atMs
+
+    const result = applyAction({ status: row.status, paymentStatus: row.payment_status }, action, { dueInFuture })
+    if (!result.ok) throw new OrderError(result.message, result.code, 409)
+
+    const queueAtMs = Date.parse(row.queue_at ?? row.confirmed_at ?? row.created_at)
+    const pickupMs = row.pickup_at ? Date.parse(row.pickup_at) : null
+    const late = (pickupMs != null ? atMs - pickupMs > settings.preorderGraceSeconds * 1000 : (atMs - queueAtMs) / 1000 > settings.lateAfterSeconds) ? 1 : 0
+
+    const sets: Record<OrderAction, string> = {
+      // A pre-order keeps its place in the queue (its due time); an as-soon-as-possible order takes its place now.
+      accept_payment: `payment_status = 'paid', status = @next, confirmed_at = @at, queue_at = @queueAt`,
+      start: `status = 'preparing', started_at = @at`,
+      ready: `status = 'ready', ready_at = @at, was_late = @late`,
+      collect: `status = 'collected', collected_at = @at`,
+    }
 
     // Guard on the old state so two staff pressing at once cannot both succeed.
     const info = db
-      .prepare(`UPDATE orders SET ${COLUMN_UPDATES[action]} WHERE id = @id AND status = @status AND payment_status = @payment`)
-      .run({ at, late, id: orderId, status: row.status, payment: row.payment_status })
+      .prepare(`UPDATE orders SET ${sets[action]} WHERE id = @id AND status = @status AND payment_status = @payment`)
+      .run({
+        at,
+        late,
+        next: result.next.status,
+        queueAt: dueMs != null && dueInFuture ? row.due_at : at,
+        id: orderId,
+        status: row.status,
+        payment: row.payment_status,
+      })
     if (info.changes !== 1) {
       throw new OrderError('Someone just updated this order. The board has been refreshed.', 'conflict', 409)
     }
     db.prepare('INSERT INTO order_events (order_id, status, actor, at) VALUES (?, ?, ?, ?)').run(
       orderId,
-      EVENT_STATUS[action],
+      action === 'accept_payment' ? result.next.status : EVENT_STATUS[action],
       actor,
       at,
     )
@@ -331,4 +383,72 @@ export async function transitionOrder(
   const view = getStaffOrder(orderId)
   if (!view) throw new OrderError('Order not found.', 'not_found', 404)
   return view
+}
+
+/**
+ * Cancel an order. Reward points that were spent on it go back, a discount code's use is given back, and a
+ * paid card order can be refunded. The reason is shown to the customer.
+ */
+export async function cancelOrder(
+  orderId: number,
+  input: { reason: string; refund: boolean },
+  actor: string,
+): Promise<StaffOrderView> {
+  const reason = input.reason.replace(/\s+/g, ' ').trim().slice(0, 140)
+  if (!reason) throw new OrderError('Add a reason so the customer knows why.', 'invalid_request')
+
+  const outcome = inTransaction(() => {
+    const row = getOrderRow(orderId)
+    if (!row) throw new OrderError('Order not found.', 'not_found', 404)
+    const result = applyCancel({ status: row.status, paymentStatus: row.payment_status }, input.refund, row.payment_method)
+    if (!result.ok) throw new OrderError(result.message, 'wrong_state', 409)
+
+    const at = new Date().toISOString()
+    const info = db
+      .prepare(
+        `UPDATE orders SET status = 'cancelled', payment_status = ?, cancelled_at = ?, cancel_reason = ?, refunded = ?
+         WHERE id = ? AND status = ? AND payment_status = ?`,
+      )
+      .run(result.next.paymentStatus, at, reason, result.refund ? 1 : 0, orderId, row.status, row.payment_status)
+    if (info.changes !== 1) throw new OrderError('Someone just updated this order. The board has been refreshed.', 'conflict', 409)
+    db.prepare('INSERT INTO order_events (order_id, status, actor, at) VALUES (?, ?, ?, ?)').run(orderId, 'cancelled', actor, at)
+
+    if (row.reward_points > 0) recordRefund(row.user_id, row.reward_points, orderId, row.number)
+    releaseCode(row.code)
+    return { posOrderId: row.pos_order_id, refund: result.refund }
+  })
+
+  publishChange()
+
+  if (outcome.posOrderId) {
+    try {
+      await pos.voidOrder(outcome.posOrderId, outcome.refund ? `cancelled and refunded: ${reason}` : `cancelled: ${reason}`)
+    } catch (error) {
+      console.error('[pos] could not void order', orderId, error)
+    }
+  }
+
+  const view = getStaffOrder(orderId)
+  if (!view) throw new OrderError('Order not found.', 'not_found', 404)
+  return view
+}
+
+/**
+ * Moves pre-orders onto the live queue when it is time to start making them. They keep the place their
+ * due-to-start time gives them, so they land behind everything confirmed before that moment and ahead of
+ * everything confirmed after it. Runs once at start-up and then every few seconds (see server/index.ts).
+ */
+export function releaseDueOrders(nowMs = Date.now()): number {
+  const nowIso = new Date(nowMs).toISOString()
+  const due = db.prepare(`SELECT id FROM orders WHERE status = 'scheduled' AND due_at <= ?`).all(nowIso) as { id: number }[]
+  if (due.length === 0) return 0
+  inTransaction(() => {
+    const update = db.prepare(`UPDATE orders SET status = 'queued' WHERE id = ? AND status = 'scheduled'`)
+    const event = db.prepare('INSERT INTO order_events (order_id, status, actor, at) VALUES (?, ?, ?, ?)')
+    for (const { id } of due) {
+      if (update.run(id).changes === 1) event.run(id, 'queued', 'schedule', nowIso)
+    }
+  })
+  publishChange()
+  return due.length
 }

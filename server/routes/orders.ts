@@ -5,14 +5,21 @@ import { OrderError } from '../domain/pricing'
 import { createOrderSchema, orderLimiter, parse, quoteSchema } from '../http'
 import { addCustomerStream } from '../realtime'
 import { createOrder, quoteOrder } from '../services/orders'
+import { listSlots } from '../services/slots'
 import { getOrderForUser, listOrdersForUser } from '../services/views'
 
 export const orderRoutes = Router()
 
 // Price and time a cart without placing it. Open to guests so the cart works before sign-in.
 orderRoutes.post('/orders/quote', attachCustomer, orderLimiter, (req, res) => {
-  const { lines, rewardId, code } = parse(quoteSchema, req.body)
-  res.json(quoteOrder(getCustomer(res)?.id ?? null, { lines, rewardId, code }))
+  const { lines, rewardId, code, pickupAt } = parse(quoteSchema, req.body)
+  res.json(quoteOrder(getCustomer(res)?.id ?? null, { lines, rewardId, code, pickupAt }))
+})
+
+// Pre-order time slots for today and the next day or so, with how many places are left in each.
+orderRoutes.get('/slots', (_req, res) => {
+  res.set('Cache-Control', 'no-store')
+  res.json(listSlots())
 })
 
 // Place an order. Card details are never part of this request: the card form is a prototype.

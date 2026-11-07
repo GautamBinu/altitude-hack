@@ -1,11 +1,12 @@
 import bcrypt from 'bcryptjs'
 import { Router } from 'express'
+import { z } from 'zod'
 import type { OrderAction } from '../../shared/types'
 import { findStaff, findStaffByUsername, getStaff, requireStaff, signInStaff, signOutStaff } from '../auth'
 import { OrderError } from '../domain/pricing'
 import { actionSchema, parse, staffLoginLimiter, staffLoginSchema } from '../http'
 import { addStaffStream } from '../realtime'
-import { transitionOrder } from '../services/orders'
+import { cancelOrder, transitionOrder } from '../services/orders'
 import { getBoard } from '../services/views'
 
 export const dashboardRoutes = Router()
@@ -43,6 +44,14 @@ dashboardRoutes.get('/dashboard/board', (_req, res) => {
 
 dashboardRoutes.get('/dashboard/stream', (req, res) => {
   addStaffStream(req, res)
+})
+
+dashboardRoutes.post('/dashboard/orders/:id/cancel', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) throw new OrderError('Unknown order.', 'not_found', 404)
+  const body = parse(z.object({ reason: z.string().min(1).max(200), refund: z.boolean().default(false) }), req.body)
+  const order = await cancelOrder(id, body, getStaff(res).username)
+  res.json({ order })
 })
 
 const ACTIONS: Record<string, OrderAction> = {

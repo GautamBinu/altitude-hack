@@ -57,10 +57,11 @@ interface OrderCardProps {
   isNext: boolean
   pending: boolean
   onAction: (order: StaffOrderView, path: OrderPath) => void
+  onCancel: (order: StaffOrderView) => void
 }
 
 /** A dashboard order: big number, who and where, what to make, how long, and one button. */
-export function OrderCard({ order, nowMs, isNew, isNext, pending, onAction }: OrderCardProps) {
+export function OrderCard({ order, nowMs, isNew, isNext, pending, onAction, onCancel }: OrderCardProps) {
   const action = primaryAction(order)
   const paid = order.paymentStatus === 'paid'
   const refunded = order.paymentStatus === 'refunded'
@@ -161,6 +162,16 @@ export function OrderCard({ order, nowMs, isNew, isNext, pending, onAction }: Or
         </Button>
       )}
 
+      {order.status !== 'collected' && !cancelled && (
+        <button
+          type="button"
+          onClick={() => onCancel(order)}
+          className="mt-2 min-h-11 w-full rounded-md text-body-sm font-semibold text-muted underline-offset-4 transition-colors hover:text-danger hover:underline"
+        >
+          Cancel order
+        </button>
+      )}
+
       {order.receiptId && <p className="mt-3 text-body-sm text-muted tnum">POS receipt {order.receiptId}</p>}
     </article>
   )
@@ -168,6 +179,10 @@ export function OrderCard({ order, nowMs, isNew, isNext, pending, onAction }: Or
 
 function dueIn(dueAt: string, nowMs: number): string {
   const minutes = Math.round((Date.parse(dueAt) - nowMs) / 60000)
+  if (minutes >= 60) {
+    const rest = minutes % 60
+    return `in ${Math.floor(minutes / 60)} h${rest ? ` ${rest} min` : ''}`
+  }
   if (minutes > 1) return `in ${minutes} min`
   if (minutes >= -1) return 'about now'
   return `${Math.abs(minutes)} min ago`

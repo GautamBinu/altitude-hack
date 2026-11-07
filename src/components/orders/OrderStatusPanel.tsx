@@ -43,7 +43,7 @@ export function OrderStatusPanel({ order, linked = false, headingLevel = 'h2', c
         {copy.detail && <span className="block text-muted">{copy.detail}</span>}
       </p>
 
-      <OrderTracker status={order.status} className="mx-auto mt-6 max-w-136" />
+      {order.status !== 'cancelled' && <OrderTracker status={order.status} className="mx-auto mt-6 max-w-136" />}
     </section>
   )
 }

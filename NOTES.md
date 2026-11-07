@@ -82,3 +82,32 @@ left a choice open, the choice and the reason are written down so the team can c
   discounts is fixed and tested: Summit Box value, then code, then reward points. Cancelling gives a use back.
 - A bug found while testing: an update of only the price was resetting the description, tags and choices because of
   how the request schema applied defaults. Fixed, with a regression check.
+
+## Part 4: pre-orders
+
+- **Two ways to order.** "As soon as possible" is unchanged. "Pick a time" shows 10 minute pickup slots for today and
+  tomorrow. Each slot takes 4 orders (`slotCapacity`), the earliest slot is 10 minutes away (`minLeadMinutes`), and
+  all of these are settings, not constants. The slot is checked again inside the same transaction that saves the order,
+  so two people cannot take the last place at once. Collected orders keep their slot; cancelled ones give it back.
+- **Opening hours are a placeholder.** Every day 07:00 to 22:00, because the real hours are not in the repo and the
+  demo has to work at any time of day. They are editable in the database now and in Settings in Part 9. ASAP orders
+  are not blocked by hours; only pre-order slots follow them.
+- **Scheduled lane.** A paid pre-order has the status `scheduled` until it is due to start: pickup time minus the
+  order's prep time (`due_at`). The server moves it to `queued` itself (checked every 5 seconds). Staff can also press
+  "Start now" to begin one early.
+- **Queue position.** The queue is ordered by `queue_at`. For an ASAP order that is the moment it was confirmed. For a
+  pre-order it is `due_at`, so it lands behind everything confirmed before it was due and ahead of everything after.
+  This keeps the existing "first in, first made" rule with no special case.
+- **ETA for a pre-order** comes from `forecastScheduled`, which replays the queue and the other pre-orders against
+  the number of baristas. The checkout says "Ready at 08:00", or "It's busy, so it may be ready N minutes late" when
+  the simulation cannot make the pickup time. It never promises an earlier time than the slot.
+- **Cash pre-orders are allowed.** They sit in Awaiting payment (showing the pickup time) until staff accept the cash.
+  Accepting puts them on the Scheduled lane, or straight into the queue if they are already due.
+- **Late flag.** An ASAP order is late after `lateAfterSeconds` in the queue. A pre-order is late only when it is not
+  ready by pickup time plus `preorderGraceSeconds` (120 s), so one that starts early is never marked late.
+- **Cancelling** needs a reason (shown to the customer). It works from any state before Collected. Points spent on
+  the order go back, a discount code's use is given back, and the POS order is voided. "Refund" only applies to a paid
+  card order; asking for a refund on an unpaid one just cancels it. The server ignores the flag rather than erroring.
+- **Kitchen display** is a toggle on the Orders screen: type 125 percent, navigation hidden, Completed lane hidden.
+- **Completed today** shows the latest 10 with "Show all", so a busy day does not push the live lanes off the page.
+- **Phone layout.** The dashboard shows one lane at a time with a tab per lane. Laptop and wider show three columns.

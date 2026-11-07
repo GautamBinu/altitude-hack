@@ -13,11 +13,22 @@ import { meRoutes } from './routes/me'
 import { orderRoutes } from './routes/orders'
 import { publicRoutes } from './routes/public'
 import { ensureSeeded } from './seed'
+import { releaseDueOrders } from './services/orders'
 
 const seeded = ensureSeeded()
 if (seeded) console.log('[server] first start: database created and seeded with the menu.')
 purgeExpiredSessions()
 setInterval(purgeExpiredSessions, 60 * 60 * 1000).unref()
+
+// Pre-orders wait on the Scheduled lane and join the live queue when it is time to start them.
+releaseDueOrders()
+setInterval(() => {
+  try {
+    releaseDueOrders()
+  } catch (error) {
+    console.error('[schedule] could not release due orders', error)
+  }
+}, 5000).unref()
 
 const app = express()
 app.disable('x-powered-by')

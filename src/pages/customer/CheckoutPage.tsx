@@ -1,11 +1,12 @@
 import { formatAedNumber } from '@shared/money'
-import { aheadPhrase, minutesPhrase } from '@shared/orderFlow'
+import { aheadPhrase, clockLabel, minutesPhrase } from '@shared/orderFlow'
 import type { CreateOrderInput, OrderView, QuoteResponse } from '@shared/types'
 import { TriangleAlert } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { CartLines } from '../../components/cart/CartLines'
 import { CardForm } from '../../components/checkout/CardForm'
+import { SlotPicker } from '../../components/checkout/SlotPicker'
 import { SignInOptions } from '../../components/SignInOptions'
 import { DrawnCheck, LoadingLine } from '../../components/ui/Art'
 import { Button, LinkButton } from '../../components/ui/Button'
@@ -18,6 +19,7 @@ import { validateCard, type CardErrors, type CardFields } from '../../lib/card'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import { useCart, type CartLine } from '../../state/cart'
 import { useLoyalty } from '../../state/loyalty'
+import { useSlots } from '../../state/slots'
 import { useOrders } from '../../state/orders'
 import { useSession } from '../../state/session'
 
@@ -26,7 +28,7 @@ const EMPTY_CARD: CardFields = { name: '', number: '', expiry: '', cvc: '' }
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
 /** The server's own price and time for this cart. The page shows these, not its local sums. */
-function useQuote(lines: CartLine[], rewardId: string | null, code: string | null) {
+function useQuote(lines: CartLine[], rewardId: string | null, code: string | null, pickupAt: string | null) {
   const orderable = useMemo(
     () =>
       lines
@@ -34,7 +36,7 @@ function useQuote(lines: CartLine[], rewardId: string | null, code: string | nul
         .map((l) => ({ itemId: l.itemId, quantity: l.quantity, selections: l.selections, note: l.note || undefined })),
     [lines],
   )
-  const key = JSON.stringify({ orderable, rewardId, code })
+  const key = JSON.stringify({ orderable, rewardId, code, pickupAt })
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,7 +48,7 @@ function useQuote(lines: CartLine[], rewardId: string | null, code: string | nul
     }
     let cancelled = false
     const load = () =>
-      api<QuoteResponse>('/orders/quote', { body: { lines: orderable, rewardId: rewardId ?? undefined, code: code ?? undefined } })
+      api<QuoteResponse>('/orders/quote', { body: { lines: orderable, rewardId: rewardId ?? undefined, code: code ?? undefined, pickupAt: pickupAt ?? undefined } })
         .then((q) => {
           if (cancelled) return
           setQuote(q)
@@ -145,12 +147,18 @@ export function CheckoutPage() {
   const [rewardId, setRewardId] = useState<string | null>(null)
   const [codeText, setCodeText] = useState('')
   const [appliedCode, setAppliedCode] = useState<string | null>(null)
-  const { quote, error: quoteError } = useQuote(cart.lines, user ? rewardId : null, appliedCode)
+  const [when, setWhen] = useState<'asap' | 'later'>('asap')
+  const [pickupAt, setPickupAt] = useState<string | null>(null)
+  const { slots, error: slotsError } = useSlots(when === 'later')
+  const { quote, error: quoteError } = useQuote(cart.lines, user ? rewardId : null, appliedCode, when === 'later' ? pickupAt : null)
+  const needsTime = when === 'later' && !pickupAt
+  // A slot that has filled or passed while the customer was deciding shows up as a notice from the server.
+  const slotNotice = when === 'later' && pickupAt ? quote?.notices.find((n) => /time|slot|open|day/i.test(n)) : undefined
   // The server says whether a typed code works. If it does not, the code is cleared and the reason is shown.
   const codeNotice = appliedCode && quote && quote.codeFils === 0 ? quote.notices.find((n) => /code/i.test(n)) : undefined
   const total = quote?.totalFils ?? cart.totalFils
   const busy = stage !== 'idle'
-  const canOrder = cart.count > 0 && !cart.hasProblems && !quoteError
+  const canOrder = cart.count > 0 && !cart.hasProblems && !quoteError && !needsTime && !slotNotice
 
   // Once the order is placed the cart empties; keep the overlay up instead of flashing the empty state.
   if (cart.lines.length === 0 && stage === 'idle') {
@@ -202,6 +210,7 @@ export function CheckoutPage() {
       paymentMethod: method,
       rewardId: rewardId ?? undefined,
       code: appliedCode ?? undefined,
+      pickupAt: when === 'later' ? (pickupAt ?? undefined) : undefined,
     }
 
     setStage('processing')
@@ -225,10 +234,18 @@ export function CheckoutPage() {
     }
   }
 
+  const behindMinutes =
+    when === 'later' && pickupAt && quote?.readyAt ? Math.round((Date.parse(quote.readyAt) - Date.parse(pickupAt)) / 60000) : 0
   const eta =
-    quote && cart.count > 0
-      ? `${aheadPhrase(quote.ahead)}. ${minutesPhrase(Math.max(1, Math.round(quote.etaSeconds / 60)))}.`
-      : null
+    when === 'later'
+      ? pickupAt && quote?.readyAt
+        ? behindMinutes > 1
+          ? `Pickup at ${clockLabel(pickupAt)}. It's busy, so it may be ready ${behindMinutes} minutes late.`
+          : `Ready at ${clockLabel(pickupAt)}.`
+        : null
+      : quote && cart.count > 0
+        ? `${aheadPhrase(quote.ahead)}. ${minutesPhrase(Math.max(1, Math.round(quote.etaSeconds / 60)))}.`
+        : null
 
   const payLabel = method === 'card' ? `Pay ${formatAedNumber(total)} AED` : 'Place order'
 
@@ -247,7 +264,7 @@ export function CheckoutPage() {
         </p>
       )}
       <Button size="xl" block busy={busy} disabled={!canOrder} onClick={() => void submit()}>
-        {payLabel}
+        {needsTime ? 'Pick a time to continue' : payLabel}
       </Button>
       {method === 'cash' && <p className="mt-2 text-body-sm text-muted">Pay at the counter to start your order.</p>}
       {cart.hasProblems && <p className="mt-2 text-body-sm text-danger">Remove the unavailable items to continue.</p>}
@@ -377,10 +394,32 @@ export function CheckoutPage() {
             <h2 id="when-heading" className="mb-2 text-headline font-semibold">
               When
             </h2>
-            <p className="text-title font-semibold">As soon as possible</p>
-            <p className="mt-1 text-body text-muted" aria-live="polite">
-              {eta ?? 'Working out your wait...'}
+            <ChoiceGroup
+              legend="Pickup time"
+              type="radio"
+              name="when"
+              layout="split"
+              value={[when]}
+              onChange={([v]) => {
+                setWhen(v as 'asap' | 'later')
+                if (v === 'asap') setPickupAt(null)
+              }}
+              choices={[
+                { value: 'asap', label: 'As soon as possible' },
+                { value: 'later', label: 'Pick a time' },
+              ]}
+            />
+            {when === 'later' && (
+              <div className="mt-4">
+                <SlotPicker slots={slots} error={slotsError} value={pickupAt} onChange={setPickupAt} />
+              </div>
+            )}
+            <p className="mt-3 text-body text-muted" aria-live="polite">
+              {slotNotice ?? eta ?? (needsTime ? 'Pick a time to continue.' : 'Working out your wait...')}
             </p>
+            {when === 'later' && method === 'cash' && (
+              <p className="mt-1 text-body-sm text-muted">Pay at the counter before your pickup time. We start making it once you have.</p>
+            )}
           </section>
 
           <section aria-labelledby="payment-heading" className="mt-8 border-t border-line pt-6">

@@ -90,7 +90,7 @@ export function OrderPage() {
     )
   }
 
-  const active = order.status !== 'collected'
+  const active = order.status !== 'collected' && order.status !== 'cancelled'
   const paid = order.paymentStatus === 'paid'
 
   return (
@@ -121,6 +121,9 @@ export function OrderPage() {
           </p>
         )}
         {order.status === 'ready' && <p className="mt-4 text-body text-muted">Say your order number when you reach the counter.</p>}
+        {order.status === 'cancelled' && order.rewardPoints > 0 && (
+          <p className="mt-4 text-body text-muted tnum">The {order.rewardPoints.toLocaleString('en-US')} points you spent on this order are back in your balance.</p>
+        )}
       </div>
 
       <aside className="mt-8 lg:mt-0" aria-label="Order details">
@@ -167,10 +170,18 @@ export function OrderPage() {
           <dd className="text-right font-semibold text-ink">
             {order.fulfilment === 'dinein' ? `Dine-in, table ${order.tableNumber}` : 'Take-away'}
           </dd>
+          {order.pickupAt && (
+            <>
+              <dt className="text-muted">Pickup time</dt>
+              <dd className="text-right font-semibold text-ink tnum">{clockTime(order.pickupAt)}</dd>
+            </>
+          )}
           <dt className="text-muted">Payment</dt>
           <dd className="text-right">
             <span className="mr-2 font-semibold text-ink">{order.paymentMethod === 'card' ? 'Card' : 'Pay at counter'}</span>
-            <StatusChip tone={paid ? 'success' : 'warning'}>{paid ? 'Paid' : 'Not paid yet'}</StatusChip>
+            <StatusChip tone={order.paymentStatus === 'refunded' ? 'neutral' : paid ? 'success' : 'warning'}>
+              {order.paymentStatus === 'refunded' ? 'Refunded' : paid ? 'Paid' : 'Not paid yet'}
+            </StatusChip>
           </dd>
           <dt className="text-muted">Placed</dt>
           <dd className="text-right font-semibold text-ink tnum">{clockTime(order.createdAt)}</dd>
@@ -181,7 +192,7 @@ export function OrderPage() {
         </LinkButton>
         {!active && (
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <ReorderButton lines={order.lines} label="Order this again" variant="primary" />
+            <ReorderButton lines={order.lines} label={order.status === 'cancelled' ? 'Order it again' : 'Order this again'} variant="primary" />
             <Link to="/menu" className="text-body-sm font-semibold text-ink underline underline-offset-4">
               Back to the menu
             </Link>

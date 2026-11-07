@@ -16,8 +16,9 @@ import { useSession } from '../../state/session'
 export function OrdersPage() {
   useDocumentTitle('Orders')
   const { user } = useSession()
-  const { orders, active, loaded } = useOrders()
-  const earlier = orders.filter((o) => o.status === 'collected')
+  const { orders, loaded } = useOrders()
+  const active = orders.filter((o) => o.status !== 'collected' && o.status !== 'cancelled')
+  const earlier = orders.filter((o) => o.status === 'collected' || o.status === 'cancelled')
 
   if (!user) {
     return (
@@ -65,7 +66,7 @@ export function OrdersPage() {
               </h2>
               <ul className="divide-y divide-line border-y border-line">
                 {earlier.map((order) => (
-                  <li key={order.id} className="flex items-center gap-3">
+                  <li key={order.id} className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
                     <Link
                       to={`/orders/${order.id}`}
                       className="flex min-h-16 min-w-0 flex-1 items-center gap-4 py-3 transition-colors hover:bg-surface"
@@ -79,10 +80,16 @@ export function OrdersPage() {
                           {shortDateTime(order.createdAt)} · {STATUS_LABEL[order.status]}
                         </span>
                       </span>
-                      <Price fils={order.totalFils} size="sm" className="hidden sm:inline-flex" />
+                      <span className="hidden shrink-0 sm:block">
+                        <Price fils={order.totalFils} size="sm" />
+                      </span>
                       <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-muted" aria-hidden="true" />
                     </Link>
-                    {order.status === 'collected' && <ReorderButton lines={order.lines} />}
+                    {(order.status === 'collected' || order.status === 'cancelled') && (
+                      <div className="pb-3 pl-20 sm:p-0">
+                        <ReorderButton lines={order.lines} />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

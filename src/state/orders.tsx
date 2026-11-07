@@ -77,7 +77,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const value = useMemo<OrdersValue>(
     () => ({
       orders,
-      active: orders.filter((o) => o.status !== 'collected'),
+      active: orders.filter((o) => o.status !== 'collected' && o.status !== 'cancelled'),
       loaded,
       live,
       lastUpdateAt,

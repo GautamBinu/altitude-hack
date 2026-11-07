@@ -32,7 +32,7 @@ export function DashboardShell() {
   return (
     <div className="min-h-dvh">
       {/* Counter tablet and laptop: a slim rail. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-22 flex-col border-r border-line bg-surface md:flex">
+      <aside data-chrome className="fixed inset-y-0 left-0 z-30 hidden w-22 flex-col border-r border-line bg-surface md:flex">
         <div className="grid h-20 place-items-center">
           <Logo variant="mark" height={34} />
         </div>
@@ -73,7 +73,7 @@ export function DashboardShell() {
       </aside>
 
       {/* Phone and portrait tablet: a compact top bar and a bottom bar for the screens. */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg px-4 pt-safe md:hidden">
+      <header data-chrome className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg px-4 pt-safe md:hidden">
         <Logo variant="mark" height={30} />
         <div className="flex items-center gap-1">
           <span className="mr-1 text-body-sm text-muted">{user.displayName}</span>
@@ -88,7 +88,7 @@ export function DashboardShell() {
           </button>
         </div>
       </header>
-      <nav aria-label="Dashboard" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
+      <nav data-chrome aria-label="Dashboard" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
         <ul className="flex overflow-x-auto [scrollbar-width:none]">
           {items.map(({ to, label, icon: Icon, end }) => (
             <li key={to} className="min-w-20 flex-1">

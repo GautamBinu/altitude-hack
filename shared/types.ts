@@ -239,6 +239,28 @@ export interface OrdersStreamPayload {
   orders: OrderView[]
 }
 
+export interface Slot {
+  startsAt: string
+  /** "13:30" in the shop's clock. */
+  label: string
+  taken: number
+  capacity: number
+  full: boolean
+}
+
+export interface SlotDay {
+  date: string
+  label: string
+  closed: boolean
+  hours: string | null
+  slots: Slot[]
+}
+
+export interface SlotsResponse {
+  slotMinutes: number
+  days: SlotDay[]
+}
+
 export interface QuoteResponse {
   lines: OrderLineView[]
   subtotalFils: number
