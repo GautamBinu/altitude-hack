@@ -1,0 +1,118 @@
+ALTITUDE - MENU (transcribed from the attached photos)
+Currency: AED
+Format:  Item | Price | Notes
+
+NOTES FOR THE BUILDER
+- Prices come from a menu photo that looks a bit dated. Treat every price as seed data the admin can edit.
+- Items marked "price not shown" had no price in the photos. Use a placeholder price, flag it as unconfirmed in the admin dashboard.
+- "Hot/Iced" means one menu item with a temperature option at the same price.
+
+============================================================
+ESPRESSO BAR
+============================================================
+Single Espresso | 20
+Double Espresso | 22
+Americano | 20 | Hot/Iced
+Cortado | 23
+Piccolo | 23
+Flat White | 25
+Cafe Latte | 25 | Hot/Iced
+Affogato | 25
+Raf Coffee | 28
+Spanish Latte | 28 | Hot/Iced
+Rose Spanish Latte | 28 | Hot/Iced
+Spanish Saffron Latte | 28 | Hot/Iced
+Pistachio Spanish Latte | 28 | Hot/Iced
+Dark Caramel Latte | 28 | Hot/Iced
+Nutella Latte | 28 | Hot/Iced
+Iced Coffee Milkshake | 28 | Iced only
+Strawberry Latte | 28 | Iced only
+Peanut Butter Latte | 32 | Hot/Iced
+
+SUMMIT BOX (multi-drink bundle)
+6 drinks | 175
+10 drinks | 250
+
+============================================================
+MANUAL BAR
+============================================================
+Aeropress | 25 | Hot/Iced
+V60 | 28 | Hot/Iced
+Chemex | 28 | Hot/Iced
+Iced Slow Drip | 28 | Iced only
+Red Eye | 30
+Black Eye | 32.50
+Death Eye | 35
+
+============================================================
+TEA
+============================================================
+Black Tea | 24
+Green Tea | 24
+Rooibos Tea | 28
+Hibiscus Tea | 28
+
+============================================================
+MILK ALTERNATIVES (add-on to any milk drink)
+============================================================
+Oatly | 6
+Almond | 6
+Coconut | 6
+Lactose Free | 6
+
+============================================================
+CAFFEINE FREE
+============================================================
+Summer Zest | 18
+Lavender Spritzer | 18
+Pomegranate Punch | 20
+Hot Chocolate / Nutella | 20 | Hot Chocolate or Nutella version
+Pina Colada | 22
+Mango Mango | 22
+Banana Chocolate-Protein Shake | 22
+
+============================================================
+SMOOTHIES (price not shown)
+============================================================
+Pash N Shoot | price not shown | Passionfruit, Mango, Pineapple
+Strawberry Split | price not shown | Strawberry, Banana
+Tropical Colada | price not shown | Coconut, Pineapple, Banana
+Avo Go Go | price not shown | Mango, Spinach, Broccoli, Avocado, Coconut, Lime, Ginger
+Big 5 | price not shown | Strawberry, Mango, Kiwi, Pineapple, Apple
+Berry Go Round | price not shown | Raspberry, Blackberry, Strawberry
+
+============================================================
+REAL MILKSHAKES (price not shown)
+============================================================
+Chocolate Milkshake | price not shown | Made with Belgian chocolate
+Strawberry Milkshake | price not shown | Made with real strawberry
+Vanilla Milkshake | price not shown
+
+============================================================
+SNACKS
+============================================================
+Acai Bowl | 24 | Choose one: Banana, Strawberry, Blueberry
+Acai Smoothie | 28 | Choose one: Banana, Strawberry
+
+TOPPINGS (for acai bowls; no price shown)
+Blueberry, Granola, Oats, Honey, Almonds, Almond Butter, Peanut Butter, Chia Seeds, Kiwi
+
+============================================================
+FOOD (price not shown)
+============================================================
+Assorted Muffins | price not shown
+Sandwiches | price not shown | Assorted
+Croissants | price not shown | Assorted
+
+============================================================
+SNOW ICE
+============================================================
+Snow Ice | price not shown | Assorted flavors, ask barista
+
+============================================================
+FROM THE KICKOFF PPT (illustrative, not on the menu photos)
+============================================================
+Caramel Cloud Latte | Drink of the Month example
+Cold Brew | shown as "popular now" example
+Iced Latte | shown as "popular now" example
+Croissant | shown as "popular now" example

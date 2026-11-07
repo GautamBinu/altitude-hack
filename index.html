@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#141210" />
+    <meta
+      name="description"
+      content="Order ahead at Altitude, the specialty coffee shop at RIT Dubai."
+    />
+    <title>Altitude</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="/brand/altitude-mark-cream.png"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/brand/altitude-mark-navy.png"
+      media="(prefers-color-scheme: light)"
+    />
+    <style>
+      /* Paint the right ground before the stylesheet arrives so the theme never flashes. */
+      html { background: #141210; }
+      html[data-theme="light"] { background: #efe7da; }
+    </style>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('altitude.theme');
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', theme === 'light' ? '#efe7da' : '#141210');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

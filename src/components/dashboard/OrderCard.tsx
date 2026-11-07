@@ -1,0 +1,148 @@
+import type { OrderStatus, StaffOrderView } from '@shared/types'
+import { Clock, TriangleAlert } from 'lucide-react'
+import { cx } from '../../lib/cx'
+import { clockTime, minutesSince } from '../../lib/format'
+import { Button } from '../ui/Button'
+import { StatusChip } from '../ui/Chip'
+import { Price } from '../ui/Price'
+
+export type OrderPath = 'accept-payment' | 'start' | 'ready' | 'collect'
+
+/** The one obvious action for each state. Collected orders have none. */
+function primaryAction(order: StaffOrderView): { path: OrderPath; label: string } | null {
+  switch (order.status) {
+    case 'awaiting_payment':
+      return { path: 'accept-payment', label: 'Accept payment' }
+    case 'queued':
+      return { path: 'start', label: 'Start preparing' }
+    case 'preparing':
+      return { path: 'ready', label: 'Mark ready' }
+    case 'ready':
+      return { path: 'collect', label: 'Mark collected' }
+    case 'collected':
+      return null
+  }
+}
+
+function timing(order: StaffOrderView, nowMs: number): string {
+  const since = (iso: string | null) => minutesSince(iso, nowMs)
+  const status: OrderStatus = order.status
+  switch (status) {
+    case 'awaiting_payment':
+      return `Waiting to pay · ${since(order.createdAt)} min`
+    case 'queued':
+      return `In queue · ${since(order.confirmedAt)} min`
+    case 'preparing':
+      return `Making · ${since(order.startedAt)} min`
+    case 'ready':
+      return `Ready · ${since(order.readyAt)} min ago`
+    case 'collected':
+      return `Collected ${clockTime(order.collectedAt)}`
+  }
+}
+
+interface OrderCardProps {
+  order: StaffOrderView
+  nowMs: number
+  lateAfterSeconds: number
+  /** Arrived in the last minute: lit once, and labelled in words. */
+  isNew: boolean
+  /** First in line to be started. */
+  isNext: boolean
+  pending: boolean
+  onAction: (order: StaffOrderView, path: OrderPath) => void
+}
+
+/** A dashboard order: big number, who and where, what to make, how long, and one button. */
+export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pending, onAction }: OrderCardProps) {
+  const action = primaryAction(order)
+  const inQueue = order.status === 'queued' || order.status === 'preparing'
+  const waitedSeconds = order.confirmedAt ? (nowMs - Date.parse(order.confirmedAt)) / 1000 : 0
+  const late = inQueue && waitedSeconds > lateAfterSeconds
+  const lateBy = Math.max(1, Math.floor((waitedSeconds - lateAfterSeconds) / 60))
+  const paid = order.paymentStatus === 'paid'
+  const preparing = order.status === 'preparing'
+
+  return (
+    <article
+      aria-label={`Order ${order.number}, ${order.customerName}`}
+      className={cx(
+        'rounded-lg border bg-surface p-4',
+        preparing ? 'border-accent shadow-band' : 'border-line',
+        isNew && 'animate-attention',
+        order.status === 'collected' && 'opacity-80',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-display text-display-lg font-bold leading-none tnum">#{order.number}</h3>
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {isNew && <StatusChip tone="accent">New</StatusChip>}
+          {isNext && <StatusChip tone="accent">Next up</StatusChip>}
+          {preparing && <StatusChip tone="accent">Preparing</StatusChip>}
+          <StatusChip tone={paid ? 'success' : 'warning'}>
+            {paid ? `Paid · ${order.paymentMethod === 'card' ? 'Card' : 'Cash'}` : 'Not paid'}
+          </StatusChip>
+        </div>
+      </div>
+
+      <p className="mt-3 text-title font-semibold leading-snug text-ink">
+        {order.customerName}
+        <span className="font-normal text-muted">
+          {' · '}
+          {order.fulfilment === 'dinein' ? `Dine-in, table ${order.tableNumber}` : 'Take-away'}
+        </span>
+      </p>
+
+      <p className="mt-1 flex items-center gap-1.5 text-body-sm text-muted tnum">
+        <Clock size={15} strokeWidth={1.75} aria-hidden="true" />
+        {timing(order, nowMs)}
+        {order.status === 'queued' && order.queue.etaSeconds != null && <span> · est. {Math.max(1, Math.round(order.queue.etaSeconds / 60))} min</span>}
+      </p>
+
+      {late && (
+        <p className="mt-2 flex items-center gap-1.5 text-body-sm font-semibold text-danger">
+          <TriangleAlert size={16} strokeWidth={1.75} aria-hidden="true" />
+          Late · {lateBy} min over
+        </p>
+      )}
+
+      <ul className="mt-4 divide-y divide-line border-y border-line">
+        {order.lines.map((line) => (
+          <li key={line.id} className="py-2.5">
+            <p className="text-title font-semibold leading-snug text-ink">
+              <span className="tnum">{line.quantity} ×</span> {line.name}
+            </p>
+            {line.modifiers.length > 0 && <p className="text-body text-muted">{line.modifiers.join(' · ')}</p>}
+            {line.note && (
+              <p className="mt-0.5 text-body font-semibold text-ink">
+                <span className="font-normal text-muted">Note: </span>
+                {line.note}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {order.status === 'awaiting_payment' && (
+        <p className="mt-4 flex items-baseline justify-between gap-3">
+          <span className="text-title font-semibold">Take at the counter</span>
+          <Price fils={order.totalFils} size="lg" />
+        </p>
+      )}
+
+      {action && (
+        <Button
+          size="xl"
+          block
+          busy={pending}
+          className="mt-4 min-h-14"
+          onClick={() => onAction(order, action.path)}
+        >
+          {action.label}
+        </Button>
+      )}
+
+      {order.receiptId && <p className="mt-3 text-body-sm text-muted tnum">POS receipt {order.receiptId}</p>}
+    </article>
+  )
+}
