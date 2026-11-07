@@ -7,6 +7,7 @@ import { config } from './config'
 import { errorHandler, originGuard } from './http'
 import { authRoutes } from './routes/auth'
 import { dashboardRoutes } from './routes/dashboard'
+import { homeRoutes } from './routes/home'
 import { meRoutes } from './routes/me'
 import { orderRoutes } from './routes/orders'
 import { publicRoutes } from './routes/public'
@@ -33,7 +34,7 @@ app.use((_req, res, next) => {
 app.use(express.json({ limit: '32kb' }))
 app.use(cookieParser())
 
-app.use('/api', originGuard, publicRoutes, authRoutes, meRoutes, orderRoutes, dashboardRoutes)
+app.use('/api', originGuard, publicRoutes, authRoutes, homeRoutes, meRoutes, orderRoutes, dashboardRoutes)
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found.', code: 'not_found' })
 })

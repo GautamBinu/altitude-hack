@@ -37,3 +37,21 @@ left a choice open, the choice and the reason are written down so the team can c
   seed step runs once, tracked by `seed:*` keys in the settings table. Existing orders, accounts and edits are
   never touched.
 - **Caramel Cloud Latte** is on the menu at a placeholder AED 30, flagged unconfirmed. It is not on the menu photo.
+
+## Part 2: home screen
+
+- **One public endpoint** (`GET /api/home`) returns the Drink of the Month, up to two banners, Popular on campus
+  for both windows, and the next three events. Signed-in members also get `GET /api/me/usual`.
+- **Popular on campus** counts units ordered from real order history (everything except cancelled orders). "Today"
+  means since midnight in the shop's timezone. Early in the day, before three items have sold, it quietly switches
+  to the last 24 hours and the tab says "24 hours" so the numbers are never misleading.
+- **Your usual** is the line the member has ordered most (same item, same choices, same note), and only appears after
+  they have ordered it at least twice. "Last order" repeats every line of their most recent order. Items that are
+  sold out or gone are left out and the member is told.
+- **Layout**: laptop and wider is a main column (greeting, live order, Drink of the Month, popular, usual) beside a
+  side column (full logo panel, loyalty card, banners, events). Tablets get a slim logo band across the top. Phones
+  use the chain-link mark in the header and skip the logo panel, as DESIGN.md says.
+- **Drink of the Month** shows "Here until <date>" as a plain fact. There is no countdown, which DESIGN.md rules out.
+- **Entry points** to the mood suggester and the builder, and the link from the events preview to the events hub, are
+  added in the parts that build those pages, so nothing on the home screen is a dead link.
+- **One-tap reorder** also lives on order history and on a collected order's page.

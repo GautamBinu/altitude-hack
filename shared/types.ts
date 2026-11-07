@@ -135,6 +135,61 @@ export interface OrderLineView {
   lineTotalFils: number
   modifiers: string[]
   note: string | null
+  /** What it takes to order the same line again. Only on a customer's own orders. */
+  itemId?: number | null
+  selections?: Record<string, number[]> | null
+  creation?: (CreationConfig & { name: string }) | null
+}
+
+/* ---------- Home ---------- */
+
+export interface HomeDrinkOfMonth {
+  itemId: number | null
+  headline: string
+  copy: string
+  imageUrl: string | null
+  endsAt: string | null
+}
+
+export interface HomeBanner {
+  id: number
+  title: string
+  body: string
+  imageUrl: string | null
+  itemId: number | null
+}
+
+export interface PopularEntry {
+  itemId: number
+  count: number
+}
+
+export interface PopularWindow {
+  /** "Today", or "Last 24 hours" early in the day before enough has been ordered. */
+  label: string
+  items: PopularEntry[]
+}
+
+export interface HomeEvent {
+  id: number
+  kind: 'event' | 'post'
+  title: string
+  club: string
+  startsAt: string | null
+  place: string | null
+  isSample: boolean
+}
+
+export interface HomeResponse {
+  drinkOfMonth: HomeDrinkOfMonth | null
+  banners: HomeBanner[]
+  popular: { today: PopularWindow; week: PopularWindow }
+  events: HomeEvent[]
+}
+
+export interface UsualResponse {
+  usual: { itemId: number; selections: Record<string, number[]>; note: string | null; count: number } | null
+  last: { orderId: number; number: number; lines: { itemId: number; quantity: number; selections: Record<string, number[]>; note: string | null }[] } | null
 }
 
 export interface QueueInfo {

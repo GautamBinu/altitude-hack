@@ -6,6 +6,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { Logo } from '../../components/Logo'
 import { OrderLines } from '../../components/orders/OrderLines'
 import { OrderStatusPanel } from '../../components/orders/OrderStatusPanel'
+import { ReorderButton } from '../../components/orders/ReorderButton'
 import { SignInOptions } from '../../components/SignInOptions'
 import { LoadingLine } from '../../components/ui/Art'
 import { LinkButton } from '../../components/ui/Button'
@@ -179,9 +180,12 @@ export function OrderPage() {
           All your orders
         </LinkButton>
         {!active && (
-          <p className="mt-2 text-body-sm text-muted">
-            Want another? <Link to="/menu" className="font-semibold text-ink underline underline-offset-4">Back to the menu</Link>.
-          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <ReorderButton lines={order.lines} label="Order this again" variant="primary" />
+            <Link to="/menu" className="text-body-sm font-semibold text-ink underline underline-offset-4">
+              Back to the menu
+            </Link>
+          </div>
         )}
       </aside>
     </div>

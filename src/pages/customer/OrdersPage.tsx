@@ -2,6 +2,7 @@ import { STATUS_LABEL } from '@shared/orderFlow'
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 import { OrderStatusPanel } from '../../components/orders/OrderStatusPanel'
+import { ReorderButton } from '../../components/orders/ReorderButton'
 import { SignInOptions } from '../../components/SignInOptions'
 import { LoadingLine } from '../../components/ui/Art'
 import { LinkButton } from '../../components/ui/Button'
@@ -64,12 +65,12 @@ export function OrdersPage() {
               </h2>
               <ul className="divide-y divide-line border-y border-line">
                 {earlier.map((order) => (
-                  <li key={order.id}>
+                  <li key={order.id} className="flex items-center gap-3">
                     <Link
                       to={`/orders/${order.id}`}
-                      className="flex min-h-16 items-center gap-4 py-3 transition-colors hover:bg-surface"
+                      className="flex min-h-16 min-w-0 flex-1 items-center gap-4 py-3 transition-colors hover:bg-surface"
                     >
-                      <span className="w-20 shrink-0 font-display text-headline font-semibold tnum">#{order.number}</span>
+                      <span className="w-16 shrink-0 font-display text-headline font-semibold tnum sm:w-20">#{order.number}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body font-semibold text-ink">
                           {order.lines.map((l) => `${l.quantity} × ${l.name}`).join(', ')}
@@ -78,9 +79,10 @@ export function OrdersPage() {
                           {shortDateTime(order.createdAt)} · {STATUS_LABEL[order.status]}
                         </span>
                       </span>
-                      <Price fils={order.totalFils} size="sm" />
+                      <Price fils={order.totalFils} size="sm" className="hidden sm:inline-flex" />
                       <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-muted" aria-hidden="true" />
                     </Link>
+                    {order.status === 'collected' && <ReorderButton lines={order.lines} />}
                   </li>
                 ))}
               </ul>

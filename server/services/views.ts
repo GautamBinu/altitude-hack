@@ -66,11 +66,14 @@ export interface OrderRow {
 interface LineRow {
   id: number
   order_id: number
+  item_id: number | null
   name: string
   quantity: number
   unit_price_fils: number
   modifiers: string
   note: string | null
+  selections: string | null
+  creation: string | null
 }
 
 const ms = (iso: string | null): number | null => (iso ? Date.parse(iso) : null)
@@ -109,7 +112,7 @@ function loadLines(orderIds: number[]): Map<number, OrderLineView[]> {
   const marks = orderIds.map(() => '?').join(',')
   const rows = db
     .prepare(
-      `SELECT id, order_id, name, quantity, unit_price_fils, modifiers, note
+      `SELECT id, order_id, item_id, name, quantity, unit_price_fils, modifiers, note, selections, creation
        FROM order_items WHERE order_id IN (${marks}) ORDER BY id`,
     )
     .all(...orderIds) as LineRow[]
@@ -123,6 +126,9 @@ function loadLines(orderIds: number[]): Map<number, OrderLineView[]> {
       lineTotalFils: row.unit_price_fils * row.quantity,
       modifiers: JSON.parse(row.modifiers) as string[],
       note: row.note,
+      itemId: row.item_id,
+      selections: row.selections ? (JSON.parse(row.selections) as Record<string, number[]>) : null,
+      creation: row.creation ? (JSON.parse(row.creation) as OrderLineView['creation']) : null,
     })
     map.set(row.order_id, list)
   }
