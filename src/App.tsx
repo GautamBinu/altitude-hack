@@ -9,6 +9,8 @@ import { ToastProvider } from './components/ui/Toast'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { CheckoutPage } from './pages/customer/CheckoutPage'
 import { HomePage } from './pages/customer/HomePage'
+import { LoyaltyPage } from './pages/customer/LoyaltyPage'
+import { ProfilePage } from './pages/customer/ProfilePage'
 import { MenuPage } from './pages/customer/MenuPage'
 import { OrderPage } from './pages/customer/OrderPage'
 import { OrdersPage } from './pages/customer/OrdersPage'
@@ -16,6 +18,7 @@ import { SignInPage } from './pages/customer/SignInPage'
 import { QueuePage } from './pages/dashboard/QueuePage'
 import { StaffLoginPage } from './pages/dashboard/StaffLoginPage'
 import { CartProvider } from './state/cart'
+import { LoyaltyProvider } from './state/loyalty'
 import { MenuProvider } from './state/menu'
 import { OrdersProvider } from './state/orders'
 import { SessionProvider, useSession } from './state/session'
@@ -36,7 +39,9 @@ function CustomerApp() {
     <MenuProvider>
       <CartProvider>
         <OrdersProvider>
-          <CustomerShell />
+          <LoyaltyProvider>
+            <CustomerShell />
+          </LoyaltyProvider>
         </OrdersProvider>
       </CartProvider>
     </MenuProvider>
@@ -99,6 +104,8 @@ export function App() {
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="orders/:id" element={<OrderPage />} />
+              <Route path="loyalty" element={<LoyaltyPage />} />
+              <Route path="profile" element={<ProfilePage />} />
               <Route path="signin" element={<SignInPage />} />
             </Route>
 

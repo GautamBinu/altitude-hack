@@ -10,19 +10,9 @@ if (reset) {
   seedDatabase({ reset: true })
   console.log(`Database reset and seeded: ${config.databasePath}`)
 } else {
-  const existing = (() => {
-    try {
-      return (db.prepare('SELECT COUNT(*) AS count FROM categories').get() as { count: number }).count
-    } catch {
-      return 0
-    }
-  })()
-  if (existing > 0) {
-    console.log('Database already has a menu. Use "npm run seed -- --reset" to start over.')
-  } else {
-    seedDatabase()
-    console.log(`Database seeded: ${config.databasePath}`)
-  }
+  seedDatabase()
+  console.log(`Database checked and any missing seed data added: ${config.databasePath}`)
+  console.log('Use "npm run seed -- --reset" to wipe it and start over.')
 }
 
 const items = (db.prepare('SELECT COUNT(*) AS n FROM items').get() as { n: number }).n

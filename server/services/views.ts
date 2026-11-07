@@ -8,9 +8,16 @@ import type {
   StaffOrderView,
 } from '../../shared/types'
 import { db } from '../db'
-import { queueInfoFor, quoteNewOrder, type QueueEntry } from '../domain/queue'
+import {
+  forecastScheduled,
+  isLate,
+  queueInfoFor,
+  quoteNewOrder,
+  type QueueEntry,
+  type ScheduledEntry,
+} from '../domain/queue'
 import { pos } from '../pos'
-import { businessDate, getSettings } from './settings'
+import { businessDate, getSettings, type Settings } from './settings'
 
 /* Read-only views of orders. Everything that leaves the server as an order goes through here. */
 
@@ -23,17 +30,37 @@ export interface OrderRow {
   fulfilment: 'takeaway' | 'dinein'
   table_number: string | null
   payment_method: 'card' | 'cash'
-  payment_status: 'unpaid' | 'paid'
+  payment_status: 'unpaid' | 'paid' | 'refunded'
   status: OrderStatus
+  subtotal_fils: number
   total_fils: number
+  code: string | null
+  code_fils: number
+  reward_id: string | null
+  reward_points: number
+  reward_fils: number
+  pass_units: number
+  pass_fils: number
   prep_seconds: number
   created_at: string
   confirmed_at: string | null
+  queue_at: string | null
+  pickup_at: string | null
+  due_at: string | null
   started_at: string | null
   ready_at: string | null
   collected_at: string | null
+  cancelled_at: string | null
+  cancel_reason: string | null
+  refunded: number
+  was_late: number
+  points_awarded: number
+  rating: number | null
+  rating_comment: string | null
+  rated_at: string | null
   pos_order_id: string | null
   receipt_id: string | null
+  is_seed: number
 }
 
 interface LineRow {
@@ -51,15 +78,27 @@ const ms = (iso: string | null): number | null => (iso ? Date.parse(iso) : null)
 export function loadQueueEntries(): QueueEntry[] {
   const rows = db
     .prepare(
-      `SELECT id, status, confirmed_at, started_at, prep_seconds
+      `SELECT id, status, queue_at, confirmed_at, started_at, prep_seconds
        FROM orders WHERE status IN ('queued', 'preparing')`,
     )
-    .all() as Pick<OrderRow, 'id' | 'status' | 'confirmed_at' | 'started_at' | 'prep_seconds'>[]
+    .all() as Pick<OrderRow, 'id' | 'status' | 'queue_at' | 'confirmed_at' | 'started_at' | 'prep_seconds'>[]
   return rows.map((r) => ({
     id: r.id,
     status: r.status as 'queued' | 'preparing',
-    confirmedAtMs: ms(r.confirmed_at) ?? 0,
+    queueAtMs: ms(r.queue_at) ?? ms(r.confirmed_at) ?? 0,
     startedAtMs: ms(r.started_at),
+    prepSeconds: r.prep_seconds,
+  }))
+}
+
+export function loadScheduledEntries(): ScheduledEntry[] {
+  const rows = db
+    .prepare(`SELECT id, pickup_at, due_at, prep_seconds FROM orders WHERE status = 'scheduled' AND pickup_at IS NOT NULL`)
+    .all() as Pick<OrderRow, 'id' | 'pickup_at' | 'due_at' | 'prep_seconds'>[]
+  return rows.map((r) => ({
+    id: r.id,
+    pickupAtMs: Date.parse(r.pickup_at!),
+    dueAtMs: ms(r.due_at) ?? Date.parse(r.pickup_at!) - r.prep_seconds * 1000,
     prepSeconds: r.prep_seconds,
   }))
 }
@@ -90,23 +129,41 @@ function loadLines(orderIds: number[]): Map<number, OrderLineView[]> {
   return map
 }
 
-function queueInfo(row: OrderRow, entries: QueueEntry[], baristas: number, nowMs: number): QueueInfo {
-  if (row.status !== 'queued' && row.status !== 'preparing') {
-    return { ahead: null, etaSeconds: null, estimatedReadyAt: null }
+interface Context {
+  entries: QueueEntry[]
+  scheduled: ScheduledEntry[]
+  settings: Settings
+  nowMs: number
+}
+
+function loadContext(nowMs: number): Context {
+  return { entries: loadQueueEntries(), scheduled: loadScheduledEntries(), settings: getSettings(), nowMs }
+}
+
+const EMPTY_QUEUE: QueueInfo = { ahead: null, etaSeconds: null, estimatedReadyAt: null }
+
+function queueInfo(row: OrderRow, ctx: Context): QueueInfo {
+  if (row.status === 'queued' || row.status === 'preparing') {
+    const entry = ctx.entries.find((e) => e.id === row.id)
+    if (!entry) return EMPTY_QUEUE
+    const info = queueInfoFor(entry, ctx.entries, ctx.settings.baristas, ctx.nowMs)
+    let readyMs = ctx.nowMs + info.etaSeconds * 1000
+    // A pre-order that is on schedule is ready at its pickup time, not before it.
+    const pickupMs = ms(row.pickup_at)
+    if (pickupMs != null && row.status === 'queued') readyMs = Math.max(readyMs, pickupMs)
+    return { ahead: info.ahead, etaSeconds: Math.round((readyMs - ctx.nowMs) / 1000), estimatedReadyAt: new Date(readyMs).toISOString() }
   }
-  const entry = entries.find((e) => e.id === row.id)
-  if (!entry) return { ahead: null, etaSeconds: null, estimatedReadyAt: null }
-  const info = queueInfoFor(entry, entries, baristas, nowMs)
-  return {
-    ahead: info.ahead,
-    etaSeconds: info.etaSeconds,
-    estimatedReadyAt: new Date(nowMs + info.etaSeconds * 1000).toISOString(),
+  if (row.status === 'scheduled' && row.pickup_at) {
+    const entry = ctx.scheduled.find((s) => s.id === row.id)
+    if (!entry) return EMPTY_QUEUE
+    const f = forecastScheduled(entry, ctx.entries, ctx.scheduled, ctx.settings.baristas, ctx.nowMs)
+    return { ahead: f.ahead, etaSeconds: Math.round((f.readyAtMs - ctx.nowMs) / 1000), estimatedReadyAt: new Date(f.readyAtMs).toISOString() }
   }
+  return EMPTY_QUEUE
 }
 
 function buildStaffViews(rows: OrderRow[], nowMs: number): StaffOrderView[] {
-  const entries = loadQueueEntries()
-  const { baristas } = getSettings()
+  const ctx = loadContext(nowMs)
   const lines = loadLines(rows.map((r) => r.id))
   return rows.map((row) => ({
     id: row.id,
@@ -116,23 +173,39 @@ function buildStaffViews(rows: OrderRow[], nowMs: number): StaffOrderView[] {
     tableNumber: row.table_number,
     paymentMethod: row.payment_method,
     paymentStatus: row.payment_status,
+    subtotalFils: row.subtotal_fils || row.total_fils,
     totalFils: row.total_fils,
+    code: row.code,
+    codeFils: row.code_fils,
+    rewardPoints: row.reward_points,
+    rewardFils: row.reward_fils,
+    passUnits: row.pass_units,
+    passFils: row.pass_fils,
+    pointsAwarded: row.points_awarded,
     lines: lines.get(row.id) ?? [],
     createdAt: row.created_at,
     confirmedAt: row.confirmed_at,
+    pickupAt: row.pickup_at,
+    dueAt: row.due_at,
     startedAt: row.started_at,
     readyAt: row.ready_at,
     collectedAt: row.collected_at,
-    queue: queueInfo(row, entries, baristas, nowMs),
+    cancelledAt: row.cancelled_at,
+    cancelReason: row.cancel_reason,
+    refunded: row.refunded === 1,
+    rating: row.rating,
+    ratingComment: row.rating_comment,
+    queue: queueInfo(row, ctx),
     customerName: row.customer_name,
     receiptId: row.receipt_id,
     prepSeconds: row.prep_seconds,
+    late: isLate(row.status, ms(row.queue_at) ?? ms(row.confirmed_at), nowMs, ctx.settings.lateAfterSeconds, ms(row.pickup_at), ctx.settings.preorderGraceSeconds),
   }))
 }
 
 /** Strip the fields only staff should see. */
 function toCustomerView(view: StaffOrderView): OrderView {
-  const { customerName: _name, receiptId: _receipt, prepSeconds: _prep, ...order } = view
+  const { customerName: _name, receiptId: _receipt, prepSeconds: _prep, late: _late, ...order } = view
   return order
 }
 
@@ -160,9 +233,6 @@ export function listOrdersForUser(userId: number, limit = 15): OrderView[] {
   return buildStaffViews(rows, Date.now()).map(toCustomerView)
 }
 
-const byQueue = (a: StaffOrderView, b: StaffOrderView) =>
-  (Date.parse(a.confirmedAt ?? a.createdAt) - Date.parse(b.confirmedAt ?? b.createdAt)) || a.id - b.id
-
 /** Everything the dashboard queue screen shows, in one snapshot. */
 export function getBoard(): Board {
   const settings = getSettings()
@@ -171,25 +241,31 @@ export function getBoard(): Board {
   const rows = db
     .prepare(
       `SELECT * FROM orders
-       WHERE status IN ('awaiting_payment', 'queued', 'preparing', 'ready')
-          OR (status = 'collected' AND business_date = ?)
+       WHERE status IN ('awaiting_payment', 'scheduled', 'queued', 'preparing', 'ready')
+          OR (status IN ('collected', 'cancelled') AND business_date = ?)
        ORDER BY id`,
     )
     .all(today) as OrderRow[]
+  const queueKeys = new Map(rows.map((r) => [r.id, r.queue_at ?? r.confirmed_at ?? r.created_at]))
   const views = buildStaffViews(rows, nowMs)
+  const byQueue = (a: StaffOrderView, b: StaffOrderView) =>
+    Date.parse(queueKeys.get(a.id)!) - Date.parse(queueKeys.get(b.id)!) || a.id - b.id
   const status = pos.status()
   return {
     serverNow: new Date(nowMs).toISOString(),
     lateAfterSeconds: settings.lateAfterSeconds,
     pos: { label: status.label, connected: status.connected },
     awaiting: views.filter((v) => v.status === 'awaiting_payment').sort((a, b) => a.id - b.id),
+    scheduled: views
+      .filter((v) => v.status === 'scheduled')
+      .sort((a, b) => Date.parse(a.pickupAt ?? a.createdAt) - Date.parse(b.pickupAt ?? b.createdAt) || a.id - b.id),
     queue: views.filter((v) => v.status === 'queued' || v.status === 'preparing').sort(byQueue),
     ready: views
       .filter((v) => v.status === 'ready')
       .sort((a, b) => Date.parse(a.readyAt ?? a.createdAt) - Date.parse(b.readyAt ?? b.createdAt)),
     completed: views
-      .filter((v) => v.status === 'collected')
-      .sort((a, b) => Date.parse(b.collectedAt ?? '') - Date.parse(a.collectedAt ?? ''))
+      .filter((v) => v.status === 'collected' || v.status === 'cancelled')
+      .sort((a, b) => Date.parse(b.collectedAt ?? b.cancelledAt ?? '') - Date.parse(a.collectedAt ?? a.cancelledAt ?? ''))
       .slice(0, 40),
   }
 }

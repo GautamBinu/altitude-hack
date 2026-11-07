@@ -1,4 +1,4 @@
-import { ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag } from 'lucide-react'
+import { ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag, User } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { cx } from '../../lib/cx'
 import { useCart } from '../../state/cart'
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/menu', label: 'Menu', icon: Coffee, end: false },
   { to: '/orders', label: 'Orders', icon: ClipboardList, end: false },
+  { to: '/profile', label: 'Profile', icon: User, end: false },
 ] as const
 
 function CartLink({ className }: { className?: string }) {
@@ -169,7 +170,7 @@ function TabBar() {
   const { active } = useOrders()
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
-      <ul className="grid grid-cols-3">
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}>
         {NAV.map(({ to, label, icon: Icon, end }) => (
           <li key={to}>
             <NavLink

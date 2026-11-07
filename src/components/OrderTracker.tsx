@@ -1,4 +1,4 @@
-import { stepNumber, TRACKER_STEPS } from '@shared/orderFlow'
+import { trackerPosition, TRACKER_STEPS } from '@shared/orderFlow'
 import type { OrderStatus } from '@shared/types'
 import { useId } from 'react'
 import { cx } from '../lib/cx'
@@ -25,11 +25,13 @@ const TRACK = XS.slice(1).reduce(
 )
 
 export function OrderTracker({ status, className }: { status: OrderStatus; className?: string }) {
-  const step = stepNumber(status)
-  const done = step === 5
-  const currentIndex = done ? -1 : step - 1
-  const progress = done ? 1 : (step - 1) / 3
+  const { done, current } = trackerPosition(status)
+  const finished = done === 4
+  // The lit band runs to the last finished stop, and on to the current one when it is in progress.
+  const reach = finished ? 3 : current != null ? current : Math.max(0, done - 1)
+  const progress = reach / 3
   const labelId = useId()
+  const stepText = finished ? 'Step 4 of 4, collected' : `Step ${Math.min(4, (current ?? done) + 1)} of 4`
 
   return (
     <div className={className}>
@@ -53,15 +55,15 @@ export function OrderTracker({ status, className }: { status: OrderStatus; class
           strokeDashoffset={1 - progress}
           style={{
             transition: 'stroke-dashoffset 800ms cubic-bezier(0.16, 1, 0.3, 1)',
-            filter: done ? undefined : 'var(--glow)',
+            filter: finished || status === 'cancelled' ? undefined : 'var(--glow)',
           }}
         />
         {XS.map((x, i) => {
-          const complete = done || i < currentIndex
-          const current = i === currentIndex
+          const complete = i < done
+          const isCurrent = i === current
           return (
             <g key={x} transform={`translate(${x} ${YS[i]})`}>
-              {current && (
+              {isCurrent && (
                 <circle
                   r={NODE_R + 5}
                   fill="none"
@@ -74,11 +76,11 @@ export function OrderTracker({ status, className }: { status: OrderStatus; class
               <circle
                 r={NODE_R}
                 fill={complete ? 'var(--c-accent)' : 'var(--c-surface)'}
-                stroke={complete || current ? 'var(--c-accent)' : 'var(--c-control)'}
-                strokeWidth={current ? 3.5 : 2.5}
+                stroke={complete || isCurrent ? 'var(--c-accent)' : 'var(--c-control)'}
+                strokeWidth={isCurrent ? 3.5 : 2.5}
                 style={{ transition: 'fill 400ms ease-out, stroke 400ms ease-out' }}
               />
-              {complete && (
+              {complete && !isCurrent && (
                 <path
                   d="M -5.5 0.5 L -1.5 4.5 L 6 -4"
                   fill="none"
@@ -88,7 +90,7 @@ export function OrderTracker({ status, className }: { status: OrderStatus; class
                   strokeLinejoin="round"
                 />
               )}
-              {current && <circle r="4.5" fill="var(--c-accent)" />}
+              {isCurrent && <circle r="4.5" fill="var(--c-accent)" />}
             </g>
           )
         })}
@@ -96,25 +98,25 @@ export function OrderTracker({ status, className }: { status: OrderStatus; class
 
       <ol className="mt-1 grid grid-cols-4 text-center" aria-label="Order progress" aria-describedby={labelId}>
         {TRACKER_STEPS.map((label, i) => {
-          const complete = done || i < currentIndex
-          const current = i === currentIndex
+          const complete = i < done
+          const isCurrent = i === current
           return (
             <li
               key={label}
-              aria-current={current ? 'step' : undefined}
+              aria-current={isCurrent ? 'step' : undefined}
               className={cx(
                 'flex items-center justify-center gap-1 text-body-sm',
-                current ? 'font-semibold text-ink' : complete ? 'text-ink' : 'text-muted',
+                isCurrent ? 'font-semibold text-ink' : complete ? 'text-ink' : 'text-muted',
               )}
             >
               {label}
-              <span className="sr-only">{complete ? ', done' : current ? ', now' : ', to come'}</span>
+              <span className="sr-only">{complete && !isCurrent ? ', done' : isCurrent ? ', now' : ', to come'}</span>
             </li>
           )
         })}
       </ol>
       <span id={labelId} className="sr-only">
-        Step {Math.min(step, 4)} of 4
+        {stepText}
       </span>
     </div>
   )
@@ -122,16 +124,15 @@ export function OrderTracker({ status, className }: { status: OrderStatus; class
 
 /** A thin four-part bar for the sticky mini tracker. */
 export function MiniProgress({ status }: { status: OrderStatus }) {
-  const step = Math.min(stepNumber(status), 4)
-  const done = stepNumber(status) === 5
+  const { done, current } = trackerPosition(status)
   return (
     <div className="flex gap-1" aria-hidden="true">
-      {[1, 2, 3, 4].map((n) => (
+      {[0, 1, 2, 3].map((n) => (
         <span
           key={n}
           className={cx(
             'h-1 w-6 rounded-full transition-colors duration-500',
-            done || n < step ? 'bg-accent' : n === step ? 'bg-accent shadow-band' : 'bg-control/50',
+            n < done && n !== current ? 'bg-accent' : n === current ? 'bg-accent shadow-band' : 'bg-control/50',
           )}
         />
       ))}

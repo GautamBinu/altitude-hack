@@ -26,11 +26,15 @@ export interface SeedItem {
   /** Extra option group keys, in display order, after temperature. */
   groups?: string[]
   tags?: string[]
+  /** drink or food. Defaults from the category. Drinks can be paid for with a Summit Box. */
+  kind?: 'drink' | 'food'
 }
 
 export interface SeedCategory {
   slug: string
   name: string
+  /** Default kind for the category's items. */
+  kind: 'drink' | 'food'
   items: SeedItem[]
 }
 
@@ -41,6 +45,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'espresso-bar',
     name: 'Espresso Bar',
+    kind: 'drink',
     items: [
       { name: 'Single Espresso', price: 2000, temp: 'hot', prep: 45, description: 'One shot, short and strong.', tags: ['strong'] },
       { name: 'Double Espresso', price: 2200, temp: 'hot', prep: 60, description: 'Two shots in one cup.', tags: ['strong'] },
@@ -60,11 +65,24 @@ export const SEED_CATEGORIES: SeedCategory[] = [
       { name: 'Iced Coffee Milkshake', price: 2800, temp: 'iced', prep: 180, description: 'Coffee blended into a cold milkshake.', tags: ['sweet', 'creamy'] },
       { name: 'Strawberry Latte', price: 2800, temp: 'iced', prep: 150, milk: true, description: 'Iced latte with strawberry.', tags: ['sweet', 'fruity'] },
       { name: 'Peanut Butter Latte', price: 3200, temp: 'both', prep: 150, milk: true, description: 'Latte with peanut butter.', tags: ['sweet', 'nutty'] },
+      // Not on the menu photo. It is the kickoff deck's example Drink of the Month, so it is seeded
+      // with a placeholder price (our estimate, flagged unconfirmed) for the team to confirm or remove.
+      {
+        name: 'Caramel Cloud Latte',
+        price: 3000,
+        unconfirmed: true,
+        temp: 'both',
+        prep: 150,
+        milk: true,
+        description: 'Latte with caramel and a soft milk cloud on top.',
+        tags: ['sweet', 'creamy'],
+      },
     ],
   },
   {
     slug: 'manual-bar',
     name: 'Manual Bar',
+    kind: 'drink',
     items: [
       { name: 'Aeropress', price: 2500, temp: 'both', prep: 240, description: 'Filter coffee brewed by Aeropress.' },
       { name: 'V60', price: 2800, temp: 'both', prep: 270, description: 'Pour-over filter coffee.' },
@@ -78,6 +96,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'tea',
     name: 'Tea',
+    kind: 'drink',
     items: [
       { name: 'Black Tea', price: 2400, temp: 'hot', prep: 120, description: 'Classic black tea.' },
       { name: 'Green Tea', price: 2400, temp: 'hot', prep: 120, description: 'Green tea.' },
@@ -88,6 +107,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'caffeine-free',
     name: 'Caffeine Free',
+    kind: 'drink',
     items: [
       { name: 'Summer Zest', price: 1800, temp: 'iced', prep: 120, caffeineFree: true, description: 'A light, cold refresher.', tags: ['fruity'] },
       { name: 'Lavender Spritzer', price: 1800, temp: 'iced', prep: 120, caffeineFree: true, description: 'Lavender spritzer, served cold.', tags: ['floral'] },
@@ -111,6 +131,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'smoothies',
     name: 'Smoothies',
+    kind: 'drink',
     items: [
       { name: 'Pash N Shoot', price: 2400, unconfirmed: true, temp: 'iced', prep: 180, caffeineFree: true, description: 'Passionfruit, mango, pineapple.', tags: ['fruity'] },
       { name: 'Strawberry Split', price: 2400, unconfirmed: true, temp: 'iced', prep: 180, caffeineFree: true, description: 'Strawberry, banana.', tags: ['fruity'] },
@@ -123,6 +144,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'real-milkshakes',
     name: 'Real Milkshakes',
+    kind: 'drink',
     items: [
       { name: 'Chocolate Milkshake', price: 2600, unconfirmed: true, temp: 'iced', prep: 210, caffeineFree: true, description: 'Made with Belgian chocolate.', tags: ['sweet', 'creamy'] },
       { name: 'Strawberry Milkshake', price: 2600, unconfirmed: true, temp: 'iced', prep: 210, caffeineFree: true, description: 'Made with real strawberry.', tags: ['sweet', 'creamy', 'fruity'] },
@@ -132,6 +154,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'snacks',
     name: 'Snacks',
+    kind: 'food',
     items: [
       {
         name: 'Acai Bowl',
@@ -146,6 +169,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
       {
         name: 'Acai Smoothie',
         price: 2800,
+        kind: 'drink',
         temp: 'iced',
         prep: 180,
         caffeineFree: true,
@@ -158,6 +182,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'food',
     name: 'Food',
+    kind: 'food',
     items: [
       { name: 'Assorted Muffins', price: 1200, unconfirmed: true, temp: 'none', prep: 30, caffeineFree: true, description: 'Assorted. Add a note if you have a preference.', tags: ['sweet'] },
       { name: 'Sandwiches', price: 2200, unconfirmed: true, temp: 'none', prep: 150, caffeineFree: true, description: 'Assorted. Add a note if you have a preference.' },
@@ -167,6 +192,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   {
     slug: 'snow-ice',
     name: 'Snow Ice',
+    kind: 'food',
     items: [
       { name: 'Snow Ice', price: 2000, unconfirmed: true, temp: 'iced', prep: 210, caffeineFree: true, description: 'Assorted flavours. Add a note for the one you want.', tags: ['sweet', 'fruity'] },
     ],
@@ -260,15 +286,35 @@ export const SEED_GROUPS: SeedGroup[] = [
 /** Display order of groups on an item sheet. */
 export const GROUP_ORDER = ['temperature', 'hot-chocolate-version', 'acai-bowl-base', 'acai-smoothie-base', 'milk', 'acai-toppings']
 
+/** Weekday keys, Monday first. */
+export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+
+// Every value below is a placeholder, not confirmed with Altitude, and editable in dashboard Settings.
+// Opening hours default to every day so pre-orders can be demonstrated at any time.
+const DEFAULT_DAY = { open: '07:00', close: '22:00', closed: false }
+
 export const DEFAULT_SETTINGS = {
-  // Placeholder: not confirmed with Altitude. Drives the queue ETA.
+  // Drives the queue estimate.
   baristas: 2,
   // An order waiting longer than this since it joined the queue is flagged as late.
   lateAfterSeconds: 600,
+  // A pre-order is late when it is still not ready this long after its pickup time.
+  preorderGraceSeconds: 120,
   // Used to decide which day an order belongs to and when order numbers reset.
   timezone: 'Asia/Dubai',
-  // Placeholder: not confirmed with Altitude. Not enforced in this phase.
-  openingHours: { note: 'placeholder', mondayToFriday: { open: '08:00', close: '18:00' } },
   // Prep time of one typical drink, used for the "wait right now" estimate on the home screen.
   typicalDrinkPrepSeconds: 120,
+  openingHours: Object.fromEntries(WEEKDAYS.map((d) => [d, { ...DEFAULT_DAY }])),
+  // Pre-order slots: how long each is, how many orders each takes, how soon the first can be, how many days ahead.
+  slotMinutes: 10,
+  slotCapacity: 4,
+  minLeadMinutes: 10,
+  daysAhead: 1,
+  // The sound the dashboard plays for a new order. Each device can still mute itself.
+  newOrderSound: 'chime',
+  // Summit Box prices come from the menu photo.
+  summitBox: [
+    { size: 6, priceFils: 17500 },
+    { size: 10, priceFils: 25000 },
+  ],
 }

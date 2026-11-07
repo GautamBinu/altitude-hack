@@ -56,6 +56,7 @@ const orderLine = z.object({
 
 export const quoteSchema = z.object({
   lines: z.array(orderLine).min(1, 'Your order is empty.').max(30),
+  rewardId: z.string().max(40).optional(),
 })
 
 export const createOrderSchema = z
@@ -68,6 +69,7 @@ export const createOrderSchema = z
       .regex(/^[A-Za-z0-9-]{1,6}$/, 'Table number can be up to 6 letters or numbers.')
       .optional(),
     paymentMethod: z.enum(['card', 'cash']),
+    rewardId: z.string().max(40).optional(),
   })
   .refine((v) => v.fulfilment !== 'dinein' || !!v.tableNumber, {
     message: 'Add your table number for dine-in.',

@@ -1,3 +1,4 @@
+import { formatAedNumber } from '@shared/money'
 import type { OrderView } from '@shared/types'
 import { WifiOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -124,10 +125,41 @@ export function OrderPage() {
       <aside className="mt-8 lg:mt-0" aria-label="Order details">
         <h2 className="mb-4 text-headline font-semibold">Your order</h2>
         <OrderLines lines={order.lines} />
+        {(order.rewardFils > 0 || order.codeFils > 0 || order.passFils > 0) && (
+          <dl className="mt-4 grid gap-1.5 border-t border-line pt-4 text-body-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted">Subtotal</dt>
+              <dd className="tnum">{formatAedNumber(order.subtotalFils)} AED</dd>
+            </div>
+            {order.passFils > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted">Summit Box ({order.passUnits} {order.passUnits === 1 ? 'drink' : 'drinks'})</dt>
+                <dd className="tnum">-{formatAedNumber(order.passFils)} AED</dd>
+              </div>
+            )}
+            {order.codeFils > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted">Code {order.code}</dt>
+                <dd className="tnum">-{formatAedNumber(order.codeFils)} AED</dd>
+              </div>
+            )}
+            {order.rewardFils > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted">Reward ({order.rewardPoints.toLocaleString('en-US')} pts)</dt>
+                <dd className="tnum">-{formatAedNumber(order.rewardFils)} AED</dd>
+              </div>
+            )}
+          </dl>
+        )}
         <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
           <span className="text-title font-semibold">Total</span>
           <Price fils={order.totalFils} size="lg" />
         </div>
+        {order.status === 'collected' && order.pointsAwarded > 0 && (
+          <p className="mt-3 text-body-sm text-muted tnum">
+            You earned <span className="font-semibold text-ink">{order.pointsAwarded.toLocaleString('en-US')} points</span> on this order.
+          </p>
+        )}
 
         <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 border-t border-line pt-4 text-body-sm">
           <dt className="text-muted">Fulfilment</dt>

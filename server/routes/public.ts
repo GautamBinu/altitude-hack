@@ -11,7 +11,7 @@ publicRoutes.get('/health', (_req, res) => {
 })
 
 publicRoutes.get('/config', (_req, res) => {
-  const body: AppConfig = { demoMode: config.demoMode, googleClientId: config.googleClientId }
+  const body: AppConfig = { demoMode: config.demoMode, googleClientId: config.googleClientId, vapidPublicKey: null }
   res.json(body)
 })
 

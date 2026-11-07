@@ -3,7 +3,7 @@ import { aheadPhrase, minutesPhrase } from '@shared/orderFlow'
 import type { CreateOrderInput, OrderView, QuoteResponse } from '@shared/types'
 import { TriangleAlert } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { CartLines } from '../../components/cart/CartLines'
 import { CardForm } from '../../components/checkout/CardForm'
 import { SignInOptions } from '../../components/SignInOptions'
@@ -17,6 +17,7 @@ import { api, errorMessage } from '../../lib/api'
 import { validateCard, type CardErrors, type CardFields } from '../../lib/card'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import { useCart, type CartLine } from '../../state/cart'
+import { useLoyalty } from '../../state/loyalty'
 import { useOrders } from '../../state/orders'
 import { useSession } from '../../state/session'
 
@@ -25,7 +26,7 @@ const EMPTY_CARD: CardFields = { name: '', number: '', expiry: '', cvc: '' }
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
 /** The server's own price and time for this cart. The page shows these, not its local sums. */
-function useQuote(lines: CartLine[]) {
+function useQuote(lines: CartLine[], rewardId: string | null) {
   const orderable = useMemo(
     () =>
       lines
@@ -33,7 +34,7 @@ function useQuote(lines: CartLine[]) {
         .map((l) => ({ itemId: l.itemId, quantity: l.quantity, selections: l.selections, note: l.note || undefined })),
     [lines],
   )
-  const key = JSON.stringify(orderable)
+  const key = JSON.stringify({ orderable, rewardId })
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,7 +46,7 @@ function useQuote(lines: CartLine[]) {
     }
     let cancelled = false
     const load = () =>
-      api<QuoteResponse>('/orders/quote', { body: { lines: orderable } })
+      api<QuoteResponse>('/orders/quote', { body: { lines: orderable, rewardId: rewardId ?? undefined } })
         .then((q) => {
           if (cancelled) return
           setQuote(q)
@@ -66,6 +67,41 @@ function useQuote(lines: CartLine[]) {
   }, [key])
 
   return { quote, error, orderable }
+}
+
+/** Subtotal, anything taken off, and the total. Only shows the rows that apply. */
+function Breakdown({ quote, total }: { quote: QuoteResponse | null; total: number }) {
+  const rows: { label: string; fils: number; negative?: boolean }[] = []
+  if (quote && (quote.rewardFils > 0 || quote.codeFils > 0 || quote.passFils > 0)) {
+    rows.push({ label: 'Subtotal', fils: quote.subtotalFils })
+    if (quote.passFils > 0) rows.push({ label: 'Summit Box', fils: quote.passFils, negative: true })
+    if (quote.codeFils > 0) rows.push({ label: 'Discount code', fils: quote.codeFils, negative: true })
+    if (quote.rewardFils > 0) rows.push({ label: 'Reward', fils: quote.rewardFils, negative: true })
+  }
+  return (
+    <div>
+      {rows.length > 0 && (
+        <dl className="mb-3 grid gap-1.5 text-body-sm">
+          {rows.map((row) => (
+            <div key={row.label} className="flex items-baseline justify-between">
+              <dt className="text-muted">{row.label}</dt>
+              <dd className="text-ink tnum">
+                {row.negative ? '-' : ''}
+                {formatAedNumber(row.fils)} AED
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <div className="flex items-center justify-between">
+        <span className="text-title font-semibold">Total</span>
+        <Price fils={total} size="xl" />
+      </div>
+      {quote && quote.pointsToEarn > 0 && (
+        <p className="mt-2 text-body-sm text-muted tnum">You'll earn {quote.pointsToEarn.toLocaleString('en-US')} points when you collect it.</p>
+      )}
+    </div>
+  )
 }
 
 function PaymentOverlay({ stage, method }: { stage: Exclude<Stage, 'idle'>; method: 'card' | 'cash' }) {
@@ -105,7 +141,9 @@ export function CheckoutPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [stage, setStage] = useState<Stage>('idle')
 
-  const { quote, error: quoteError } = useQuote(cart.lines)
+  const loyalty = useLoyalty()
+  const [rewardId, setRewardId] = useState<string | null>(null)
+  const { quote, error: quoteError } = useQuote(cart.lines, user ? rewardId : null)
   const total = quote?.totalFils ?? cart.totalFils
   const busy = stage !== 'idle'
   const canOrder = cart.count > 0 && !cart.hasProblems && !quoteError
@@ -158,6 +196,7 @@ export function CheckoutPage() {
       fulfilment,
       tableNumber: fulfilment === 'dinein' ? table.trim().toUpperCase() : undefined,
       paymentMethod: method,
+      rewardId: rewardId ?? undefined,
     }
 
     setStage('processing')
@@ -223,9 +262,8 @@ export function CheckoutPage() {
               Items
             </h2>
             <CartLines />
-            <div className="mt-5 flex items-center justify-between border-t border-line pt-4 lg:hidden">
-              <span className="text-title font-semibold">Total</span>
-              <Price fils={total} size="lg" />
+            <div className="mt-5 border-t border-line pt-4 lg:hidden">
+              <Breakdown quote={quote} total={total} />
             </div>
           </section>
 
@@ -259,6 +297,43 @@ export function CheckoutPage() {
               />
             )}
           </section>
+
+          {user && loyalty.summary && (
+            <section aria-labelledby="reward-heading" className="mt-8 border-t border-line pt-6">
+              <h2 id="reward-heading" className="mb-1 text-headline font-semibold">
+                Use your points
+              </h2>
+              <p className="mb-4 text-body-sm text-muted tnum">
+                You have {loyalty.summary.balance.toLocaleString('en-US')} points. <Link to="/loyalty" className="font-semibold text-ink underline underline-offset-4">See rewards</Link>
+              </p>
+              <ChoiceGroup
+                legend="Reward"
+                type="radio"
+                name="reward"
+                layout="stack"
+                value={[rewardId ?? 'none']}
+                onChange={([v]) => setRewardId(v === 'none' ? null : String(v))}
+                choices={[
+                  { value: 'none', label: 'No reward' },
+                  ...loyalty.summary.rewards
+                    .filter((r) => r.unlocked)
+                    .map((r) => ({
+                      value: r.id,
+                      label: r.label,
+                      disabled: !r.affordable,
+                      hint: r.affordable
+                        ? `${r.costPoints.toLocaleString('en-US')} pts`
+                        : `needs ${r.costPoints.toLocaleString('en-US')} pts`,
+                    })),
+                ]}
+              />
+              {quote?.notices.map((n) => (
+                <p key={n} role="status" className="mt-2 text-body-sm text-danger">
+                  {n}
+                </p>
+              ))}
+            </section>
+          )}
 
           <section aria-labelledby="when-heading" className="mt-8 border-t border-line pt-6">
             <h2 id="when-heading" className="mb-2 text-headline font-semibold">
@@ -300,10 +375,7 @@ export function CheckoutPage() {
 
         {/* Tablet and laptop: the total and the button stay beside the form. */}
         <aside className="sticky top-8 hidden rounded-lg border border-line bg-surface p-5 lg:block" aria-label="Order total">
-          <div className="flex items-center justify-between">
-            <span className="text-title font-semibold">Total</span>
-            <Price fils={total} size="xl" />
-          </div>
+          <Breakdown quote={quote} total={total} />
           {eta && <p className="mt-2 text-body-sm text-muted">{eta}</p>}
           <div className="mt-5">{action}</div>
         </aside>

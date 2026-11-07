@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { applyAction, initialState, type OrderState } from './orderMachine'
+import { applyAction, applyCancel, initialState, type OrderState } from './orderMachine'
 
 const cash = initialState('cash')
 const card = initialState('card')
 
-function ok(state: OrderState, action: Parameters<typeof applyAction>[1]): OrderState {
-  const result = applyAction(state, action)
+function ok(state: OrderState, action: Parameters<typeof applyAction>[1], ctx?: Parameters<typeof applyAction>[2]): OrderState {
+  const result = applyAction(state, action, ctx)
   if (!result.ok) throw new Error(`expected ${action} to succeed: ${result.message}`)
   return result.next
 }
@@ -16,6 +16,12 @@ describe('initial state', () => {
   })
   it('holds a cash order at the payment step, unpaid', () => {
     expect(cash).toEqual({ status: 'awaiting_payment', paymentStatus: 'unpaid' })
+  })
+  it('puts a paid card pre-order on the Scheduled lane', () => {
+    expect(initialState('card', true)).toEqual({ status: 'scheduled', paymentStatus: 'paid' })
+  })
+  it('still holds a cash pre-order at the payment step', () => {
+    expect(initialState('cash', true).status).toBe('awaiting_payment')
   })
 })
 
@@ -31,6 +37,10 @@ describe('cash payment gating', () => {
 
   it('moves into the queue once payment is accepted', () => {
     expect(ok(cash, 'accept_payment')).toEqual({ status: 'queued', paymentStatus: 'paid' })
+  })
+
+  it('moves a cash pre-order onto the Scheduled lane when it is not due yet', () => {
+    expect(ok(cash, 'accept_payment', { dueInFuture: true }).status).toBe('scheduled')
   })
 
   it('cannot have payment accepted twice', () => {
@@ -63,6 +73,10 @@ describe('the happy path', () => {
     s = ok(s, 'collect')
     expect(s).toEqual({ status: 'collected', paymentStatus: 'paid' })
   })
+
+  it('lets a barista start a scheduled order early', () => {
+    expect(ok(initialState('card', true), 'start').status).toBe('preparing')
+  })
 })
 
 describe('invalid moves are rejected', () => {
@@ -85,5 +99,37 @@ describe('invalid moves are rejected', () => {
     const result = applyAction(cash, 'start')
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.message).toMatch(/Accept payment first/)
+  })
+})
+
+describe('cancelling', () => {
+  it('cancels an order that is still being handled', () => {
+    for (const state of [cash, card, ok(card, 'start'), ok(ok(card, 'start'), 'ready'), initialState('card', true)]) {
+      expect(applyCancel(state, false, 'card').ok).toBe(true)
+    }
+  })
+
+  it('refunds a paid card order when asked', () => {
+    const r = applyCancel(card, true, 'card')
+    expect(r.ok && r.refund).toBe(true)
+    expect(r.ok && r.next).toEqual({ status: 'cancelled', paymentStatus: 'refunded' })
+  })
+
+  it('keeps the payment status when no refund is asked for', () => {
+    const r = applyCancel(card, false, 'card')
+    expect(r.ok && r.next.paymentStatus).toBe('paid')
+  })
+
+  it('never marks an unpaid cash order as refunded', () => {
+    const r = applyCancel(cash, true, 'cash')
+    expect(r.ok && r.refund).toBe(false)
+    expect(r.ok && r.next.paymentStatus).toBe('unpaid')
+  })
+
+  it('cannot cancel a collected or already cancelled order', () => {
+    const collected = ok(ok(ok(card, 'start'), 'ready'), 'collect')
+    expect(applyCancel(collected, false, 'card').ok).toBe(false)
+    const cancelled = applyCancel(card, false, 'card')
+    if (cancelled.ok) expect(applyCancel(cancelled.next, false, 'card').ok).toBe(false)
   })
 })

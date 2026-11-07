@@ -30,11 +30,15 @@ export interface PricingItem {
   prepSeconds: number
   soldOut: boolean
   hidden: boolean
+  /** A drink can be paid for with a Summit Box. */
+  kind: 'drink' | 'food'
+  categorySlug: string
   groups: PricingGroup[]
 }
 
 export interface PricedLine {
-  itemId: number
+  /** Null for a builder creation. */
+  itemId: number | null
   name: string
   quantity: number
   unitPriceFils: number
@@ -43,6 +47,12 @@ export interface PricedLine {
   prepSeconds: number
   modifiers: string[]
   note: string | null
+  kind: 'drink' | 'food'
+  categorySlug: string
+  /** What was chosen, so the order can be repeated exactly. */
+  selections: Record<string, number[]> | null
+  /** The builder recipe, for a creation. */
+  creation: string | null
 }
 
 export class OrderError extends Error {
@@ -110,22 +120,40 @@ export function priceLine(item: PricingItem | undefined, input: OrderLineInput):
     prepSeconds: item.prepSeconds,
     modifiers: describeSelections(item.groups, chosen),
     note: cleanNote(input.note),
+    kind: item.kind,
+    categorySlug: item.categorySlug,
+    selections: chosen,
+    creation: null,
   }
 }
 
 export interface PricedOrder {
   lines: PricedLine[]
-  totalFils: number
+  subtotalFils: number
   /** Time to make the whole order: sum of prep time x quantity across lines. */
   prepSeconds: number
 }
 
-export function priceOrder(items: Map<number, PricingItem>, lines: OrderLineInput[]): PricedOrder {
+/** Prices a builder creation. Supplied by the builder module so this file stays free of the database. */
+export type CreationPricer = (input: OrderLineInput) => PricedLine
+
+export function priceOrder(
+  items: Map<number, PricingItem>,
+  lines: OrderLineInput[],
+  priceCreation?: CreationPricer,
+): PricedOrder {
   if (lines.length === 0) throw new OrderError('Your order is empty.', 'empty_order')
-  const priced = lines.map((line) => priceLine(items.get(line.itemId), line))
+  const priced = lines.map((line) => {
+    if (line.creation) {
+      if (!priceCreation) throw new OrderError("Custom coffees aren't available right now.", 'creation_unavailable', 409)
+      return priceCreation(line)
+    }
+    if (line.itemId == null) throw new OrderError('One of the lines has no item.', 'invalid_request')
+    return priceLine(items.get(line.itemId), line)
+  })
   return {
     lines: priced,
-    totalFils: priced.reduce((sum, l) => sum + l.lineTotalFils, 0),
+    subtotalFils: priced.reduce((sum, l) => sum + l.lineTotalFils, 0),
     prepSeconds: priced.reduce((sum, l) => sum + l.prepSeconds * l.quantity, 0),
   }
 }

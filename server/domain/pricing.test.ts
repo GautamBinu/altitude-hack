@@ -45,6 +45,8 @@ const latte: PricingItem = {
   prepSeconds: 120,
   soldOut: false,
   hidden: false,
+  kind: 'drink',
+  categorySlug: 'espresso-bar',
   groups: [temperature, milk],
 }
 const bowl: PricingItem = { ...latte, id: 2, name: 'Acai Bowl', priceFils: 2400, prepSeconds: 240, groups: [toppings] }
@@ -107,7 +109,7 @@ describe('server-side pricing', () => {
       { itemId: 1, quantity: 2, selections: { '10': [100], '11': [110] } },
       { itemId: 2, quantity: 1, selections: { '12': [] } },
     ])
-    expect(order.totalFils).toBe(2 * 2500 + 2400)
+    expect(order.subtotalFils).toBe(2 * 2500 + 2400)
     expect(order.prepSeconds).toBe(2 * 120 + 240)
   })
 

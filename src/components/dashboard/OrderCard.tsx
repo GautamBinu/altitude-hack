@@ -1,4 +1,4 @@
-import type { OrderStatus, StaffOrderView } from '@shared/types'
+import type { StaffOrderView } from '@shared/types'
 import { Clock, TriangleAlert } from 'lucide-react'
 import { cx } from '../../lib/cx'
 import { clockTime, minutesSince } from '../../lib/format'
@@ -8,11 +8,13 @@ import { Price } from '../ui/Price'
 
 export type OrderPath = 'accept-payment' | 'start' | 'ready' | 'collect'
 
-/** The one obvious action for each state. Collected orders have none. */
+/** The one obvious action for each state. Finished and cancelled orders have none. */
 function primaryAction(order: StaffOrderView): { path: OrderPath; label: string } | null {
   switch (order.status) {
     case 'awaiting_payment':
       return { path: 'accept-payment', label: 'Accept payment' }
+    case 'scheduled':
+      return { path: 'start', label: 'Start now' }
     case 'queued':
       return { path: 'start', label: 'Start preparing' }
     case 'preparing':
@@ -20,16 +22,18 @@ function primaryAction(order: StaffOrderView): { path: OrderPath; label: string 
     case 'ready':
       return { path: 'collect', label: 'Mark collected' }
     case 'collected':
+    case 'cancelled':
       return null
   }
 }
 
 function timing(order: StaffOrderView, nowMs: number): string {
   const since = (iso: string | null) => minutesSince(iso, nowMs)
-  const status: OrderStatus = order.status
-  switch (status) {
+  switch (order.status) {
     case 'awaiting_payment':
       return `Waiting to pay · ${since(order.createdAt)} min`
+    case 'scheduled':
+      return `Pickup ${clockTime(order.pickupAt)}`
     case 'queued':
       return `In queue · ${since(order.confirmedAt)} min`
     case 'preparing':
@@ -38,6 +42,8 @@ function timing(order: StaffOrderView, nowMs: number): string {
       return `Ready · ${since(order.readyAt)} min ago`
     case 'collected':
       return `Collected ${clockTime(order.collectedAt)}`
+    case 'cancelled':
+      return `Cancelled ${clockTime(order.cancelledAt)}`
   }
 }
 
@@ -54,14 +60,15 @@ interface OrderCardProps {
 }
 
 /** A dashboard order: big number, who and where, what to make, how long, and one button. */
-export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pending, onAction }: OrderCardProps) {
+export function OrderCard({ order, nowMs, isNew, isNext, pending, onAction }: OrderCardProps) {
   const action = primaryAction(order)
-  const inQueue = order.status === 'queued' || order.status === 'preparing'
-  const waitedSeconds = order.confirmedAt ? (nowMs - Date.parse(order.confirmedAt)) / 1000 : 0
-  const late = inQueue && waitedSeconds > lateAfterSeconds
-  const lateBy = Math.max(1, Math.floor((waitedSeconds - lateAfterSeconds) / 60))
   const paid = order.paymentStatus === 'paid'
+  const refunded = order.paymentStatus === 'refunded'
   const preparing = order.status === 'preparing'
+  const cancelled = order.status === 'cancelled'
+  const lateBy = order.pickupAt
+    ? Math.max(1, Math.floor((nowMs - Date.parse(order.pickupAt)) / 60000))
+    : Math.max(1, Math.floor((nowMs - Date.parse(order.confirmedAt ?? order.createdAt)) / 60000))
 
   return (
     <article
@@ -70,7 +77,7 @@ export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pendi
         'rounded-lg border bg-surface p-4',
         preparing ? 'border-accent shadow-band' : 'border-line',
         isNew && 'animate-attention',
-        order.status === 'collected' && 'opacity-80',
+        (order.status === 'collected' || cancelled) && 'opacity-80',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -79,9 +86,14 @@ export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pendi
           {isNew && <StatusChip tone="accent">New</StatusChip>}
           {isNext && <StatusChip tone="accent">Next up</StatusChip>}
           {preparing && <StatusChip tone="accent">Preparing</StatusChip>}
-          <StatusChip tone={paid ? 'success' : 'warning'}>
-            {paid ? `Paid · ${order.paymentMethod === 'card' ? 'Card' : 'Cash'}` : 'Not paid'}
-          </StatusChip>
+          {order.pickupAt && order.status !== 'scheduled' && <StatusChip tone="neutral">Pre-order</StatusChip>}
+          {cancelled ? (
+            <StatusChip tone="danger">{refunded ? 'Cancelled · refunded' : 'Cancelled'}</StatusChip>
+          ) : (
+            <StatusChip tone={paid ? 'success' : 'warning'}>
+              {paid ? `Paid · ${order.paymentMethod === 'card' ? 'Card' : 'Cash'}` : 'Not paid'}
+            </StatusChip>
+          )}
         </div>
       </div>
 
@@ -93,18 +105,31 @@ export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pendi
         </span>
       </p>
 
-      <p className="mt-1 flex items-center gap-1.5 text-body-sm text-muted tnum">
+      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-body-sm text-muted tnum">
         <Clock size={15} strokeWidth={1.75} aria-hidden="true" />
         {timing(order, nowMs)}
-        {order.status === 'queued' && order.queue.etaSeconds != null && <span> · est. {Math.max(1, Math.round(order.queue.etaSeconds / 60))} min</span>}
+        {order.status === 'queued' && order.queue.etaSeconds != null && (
+          <span> · est. {Math.max(1, Math.round(order.queue.etaSeconds / 60))} min</span>
+        )}
       </p>
 
-      {late && (
+      {order.status === 'scheduled' && order.dueAt && (
+        <p className="mt-1 text-body-sm font-semibold text-ink tnum">
+          Due to start {clockTime(order.dueAt)}
+          <span className="font-normal text-muted"> · {dueIn(order.dueAt, nowMs)}</span>
+        </p>
+      )}
+      {order.pickupAt && order.status === 'awaiting_payment' && (
+        <p className="mt-1 text-body-sm font-semibold text-ink tnum">Pickup {clockTime(order.pickupAt)}</p>
+      )}
+
+      {order.late && (
         <p className="mt-2 flex items-center gap-1.5 text-body-sm font-semibold text-danger">
           <TriangleAlert size={16} strokeWidth={1.75} aria-hidden="true" />
           Late · {lateBy} min over
         </p>
       )}
+      {cancelled && order.cancelReason && <p className="mt-2 text-body-sm text-muted">Reason: {order.cancelReason}</p>}
 
       <ul className="mt-4 divide-y divide-line border-y border-line">
         {order.lines.map((line) => (
@@ -131,13 +156,7 @@ export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pendi
       )}
 
       {action && (
-        <Button
-          size="xl"
-          block
-          busy={pending}
-          className="mt-4 min-h-14"
-          onClick={() => onAction(order, action.path)}
-        >
+        <Button size="xl" block busy={pending} className="mt-4 min-h-14" onClick={() => onAction(order, action.path)}>
           {action.label}
         </Button>
       )}
@@ -145,4 +164,11 @@ export function OrderCard({ order, nowMs, lateAfterSeconds, isNew, isNext, pendi
       {order.receiptId && <p className="mt-3 text-body-sm text-muted tnum">POS receipt {order.receiptId}</p>}
     </article>
   )
+}
+
+function dueIn(dueAt: string, nowMs: number): string {
+  const minutes = Math.round((Date.parse(dueAt) - nowMs) / 60000)
+  if (minutes > 1) return `in ${minutes} min`
+  if (minutes >= -1) return 'about now'
+  return `${Math.abs(minutes)} min ago`
 }

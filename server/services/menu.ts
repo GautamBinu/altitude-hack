@@ -11,8 +11,12 @@ function imageRoots(): string[] {
   return [resolve('dist/images/menu'), resolve('public/images/menu')]
 }
 
-/** Returns the public URL of the item's photo, or null if the team has not added one yet. */
-function imageUrlFor(slug: string): string | null {
+/**
+ * Returns the public URL of the item's photo, or null if the team has not added one yet.
+ * A photo uploaded from the dashboard wins; otherwise a file dropped into public/images/menu.
+ */
+function imageUrlFor(slug: string, uploaded: string | null): string | null {
+  if (uploaded) return uploaded
   for (const root of imageRoots()) {
     for (const ext of IMAGE_EXTENSIONS) {
       if (existsSync(join(root, `${slug}.${ext}`))) return `/images/menu/${slug}.${ext}`
@@ -34,6 +38,9 @@ interface ItemRow {
   prep_seconds: number
   sold_out: number
   hidden: number
+  image: string | null
+  kind: 'drink' | 'food'
+  category_slug: string
 }
 interface GroupRow {
   item_id: number
@@ -67,10 +74,12 @@ function loadMenuData(itemFilter?: number[]): MenuData {
     if (itemFilter.length === 0) return { categories, items: [], groupsByItem: new Map() }
     const marks = itemFilter.map(() => '?').join(',')
     items = db
-      .prepare(`SELECT * FROM items WHERE id IN (${marks}) ORDER BY sort_order, id`)
+      .prepare(`SELECT i.*, c.slug AS category_slug FROM items i JOIN categories c ON c.id = i.category_id WHERE i.id IN (${marks}) ORDER BY i.sort_order, i.id`)
       .all(...itemFilter) as ItemRow[]
   } else {
-    items = db.prepare('SELECT * FROM items WHERE hidden = 0 ORDER BY sort_order, id').all() as ItemRow[]
+    items = db
+      .prepare('SELECT i.*, c.slug AS category_slug FROM items i JOIN categories c ON c.id = i.category_id WHERE i.hidden = 0 ORDER BY i.sort_order, i.id')
+      .all() as ItemRow[]
   }
 
   const links = db
@@ -137,7 +146,8 @@ export function loadMenu(): MenuCategory[] {
             temperature: item.temperature,
             caffeineFree: item.caffeine_free === 1,
             soldOut: item.sold_out === 1,
-            imageUrl: imageUrlFor(item.slug),
+            imageUrl: imageUrlFor(item.slug, item.image),
+            kind: item.kind,
             groups: groupsByItem.get(item.id) ?? [],
           }),
         ),
@@ -158,6 +168,8 @@ export function loadPricingItems(ids: number[]): Map<number, PricingItem> {
       prepSeconds: item.prep_seconds,
       soldOut: item.sold_out === 1,
       hidden: item.hidden === 1,
+      kind: item.kind,
+      categorySlug: item.category_slug,
       groups: groupsByItem.get(item.id) ?? [],
     })
   }
