@@ -12,6 +12,7 @@ import {
 import { SEED_BUILDER, SEED_CODE, SEED_POSTS, SEED_PROMOS } from './seed-content'
 import { DEFAULT_REWARDS, DEFAULT_TIERS } from '../shared/loyalty'
 import { addDays, businessDate, getSettings, zonedTimeToUtc } from './services/settings'
+import { seedTagsBySlug, tagsFor } from './seed-mood'
 import { slugify } from './slug'
 
 export { slugify }
@@ -142,11 +143,7 @@ function seedMenu(): void {
     category.items.forEach((item, itemIndex) => {
       const slug = slugify(item.name)
       if (findItem.get(slug)) return
-      const tags = [
-        ...(item.tags ?? []),
-        item.caffeineFree ? 'caffeine-free' : 'caffeinated',
-        ...(item.temp === 'both' ? ['hot', 'iced'] : item.temp === 'none' ? [] : [item.temp]),
-      ]
+      const tags = tagsFor(item)
       const res = insertItem.run(
         categoryId,
         slug,
@@ -176,6 +173,26 @@ function fixItemKinds(): void {
   const update = db.prepare('UPDATE items SET kind = ? WHERE slug = ?')
   for (const category of SEED_CATEGORIES) {
     for (const item of category.items) update.run(item.kind ?? category.kind, slugify(item.name))
+  }
+}
+
+/**
+ * Menus seeded before the mood suggester only had a few tags. Add the mood and flavour tags to the items
+ * we seeded, keeping whatever tags are already there. It runs once, so tags the team removes later stay removed.
+ */
+function addMoodTags(): void {
+  const read = db.prepare('SELECT tags FROM items WHERE slug = ?')
+  const write = db.prepare('UPDATE items SET tags = ? WHERE slug = ?')
+  for (const [slug, seeded] of seedTagsBySlug()) {
+    const row = read.get(slug) as { tags: string } | undefined
+    if (!row) continue
+    let current: string[] = []
+    try {
+      current = JSON.parse(row.tags) as string[]
+    } catch {
+      /* start from the seeded tags */
+    }
+    write.run(JSON.stringify([...new Set([...current, ...seeded])]), slug)
   }
 }
 
@@ -272,6 +289,7 @@ function seedAll(): void {
   seedStaff()
   runStep('menu', seedMenu)
   runStep('kinds', fixItemKinds)
+  runStep('mood-tags', addMoodTags)
   runStep('builder', seedBuilder)
   runStep('history', () => {
     seedHistory()

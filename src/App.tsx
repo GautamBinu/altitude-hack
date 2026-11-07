@@ -12,6 +12,7 @@ import { HomePage } from './pages/customer/HomePage'
 import { LoyaltyPage } from './pages/customer/LoyaltyPage'
 import { ProfilePage } from './pages/customer/ProfilePage'
 import { MenuPage } from './pages/customer/MenuPage'
+import { MoodPage } from './pages/customer/MoodPage'
 import { OrderPage } from './pages/customer/OrderPage'
 import { OrdersPage } from './pages/customer/OrdersPage'
 import { SignInPage } from './pages/customer/SignInPage'
@@ -103,6 +104,7 @@ export function App() {
             <Route element={<CustomerRoot />}>
               <Route index element={<HomePage />} />
               <Route path="menu" element={<MenuPage />} />
+              <Route path="mood" element={<MoodPage />} />
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="orders/:id" element={<OrderPage />} />

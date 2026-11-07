@@ -45,6 +45,9 @@ export const staffLoginLimiter = rateLimit({
 /** Quoting and placing orders. */
 export const orderLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 120 })
 
+/** The mood suggester. Each request may cost a model call, so it is limited per address. */
+export const moodLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 40 })
+
 /* ---------- Schemas ---------- */
 
 const orderLine = z.object({

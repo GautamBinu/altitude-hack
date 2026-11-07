@@ -29,6 +29,9 @@ export const config = {
   demoMode: (process.env.DEMO_MODE ?? (isProduction ? 'false' : 'true')).toLowerCase() === 'true',
   googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || null,
   allowedEmailDomains: list(process.env.ALLOWED_EMAIL_DOMAINS),
+  /** Optional. When set, the mood suggester asks a model to read the text. Without it, the local scorer does the job. */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim() || null,
+  anthropicModel: process.env.ANTHROPIC_MODEL?.trim() || 'claude-haiku-4-5',
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD || 'altitude-admin',
   seedBaristaPassword: process.env.SEED_BARISTA_PASSWORD || 'altitude-barista',
 } as const

@@ -27,6 +27,16 @@ export function unitPriceFils(item: MenuItem, selections: Selections): number {
   return price
 }
 
+/** The default choices, with hot or iced picked when the item has that choice. */
+export function selectionsWithTemperature(item: MenuItem, temperature: 'hot' | 'iced' | null): Selections {
+  const selections = defaultSelections(item.groups)
+  if (!temperature) return selections
+  const group = item.groups.find((g) => g.key === 'temperature')
+  const option = group?.options.find((o) => o.name.toLowerCase() === temperature)
+  if (group && option) selections[String(group.id)] = [option.id]
+  return selections
+}
+
 /** True when every required group has a choice. */
 export function selectionsComplete(groups: MenuGroup[], selections: Selections): boolean {
   return groups.every((g) => !g.required || (selections[String(g.id)]?.length ?? 0) > 0)

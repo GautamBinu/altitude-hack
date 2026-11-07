@@ -111,3 +111,36 @@ left a choice open, the choice and the reason are written down so the team can c
 - **Kitchen display** is a toggle on the Orders screen: type 125 percent, navigation hidden, Completed lane hidden.
 - **Completed today** shows the latest 10 with "Show all", so a busy day does not push the live lanes off the page.
 - **Phone layout.** The dashboard shows one lane at a time with a tab per lane. Laptop and wider show three columns.
+
+## Part 5: "What are you in the mood for?"
+
+- **The local scorer is the product; the model is an optional upgrade.** `server/domain/mood.ts` reads the text, scores every
+  menu item by its tags, and picks three. It needs no network and no key, so the feature always works, including on a
+  laptop with no internet at the demo.
+- **How the text is read.** `server/domain/moodLexicon.ts` is a list of rules: phrases such as "rainy", "finals week" or
+  "dont like sweet" mapped to tags to look for and tags to avoid. Longer phrases win ("cold brew" is a drink, "cold
+  outside" is weather). A "not" before a phrase flips it within its clause ("sweet but not heavy" wants sweet and
+  light), and a negated situation ("not raining") is ignored. Taste words the customer names count more than moods and
+  weather, so "tired, but I want something sweet" still gets sweet drinks, with caffeine as a tie-breaker.
+- **Hard rules.** No caffeine, decaf or "cant sleep" returns only caffeine-free drinks. A limit such as "under 25 AED" returns
+  only drinks at or under it, or the cheapest few with a note when nothing fits. Food is only suggested when the text asks.
+  Sold-out and hidden items are never suggested. Hot or iced is passed on, so "Add to order" picks the right temperature.
+- **Tags.** Every seeded item now has mood and flavour tags (`server/seed-mood.ts`), added to an existing database once by the
+  `mood-tags` seed step without removing tags the team set. They are our own reading of the menu, not Altitude's. In the
+  dashboard, Menu, edit an item, Tags: a tap-to-toggle list of the words the suggester understands sits under the text box.
+  `milk-free` is only on items that are plainly milk-free from their description (espresso, filter coffee, tea). Nothing
+  claims "vegan" or "dairy free".
+- **One-line reasons** are written from the tags the item really has, never from the text alone: "Caramel and sweet, for a rainy
+  day." Each pick leads with what sets it apart, so three picks do not repeat the same line. When a request cannot be
+  read, the reason is how many times the drink was ordered this week.
+- **The model path** (`ANTHROPIC_API_KEY`, optional `ANTHROPIC_MODEL`, default `claude-haiku-4-5`). The menu and the customer's
+  text go to the Messages API with a system prompt that says the text is data. The reply must be JSON; every pick is checked
+  against the real, available menu, reasons are cleaned (no emoji, one line), and duplicates or unknown ids are dropped. If
+  fewer than three survive, the local scorer fills the rest. A timeout (8 s), an error or a nonsense reply silently falls back
+  to the local scorer. The response never says which engine answered, and the UI has no "AI" label. **The live model call
+  has not been run**, because there is no key in this workspace. The prompt builder, reply checker and fallback are
+  covered by unit tests with a stand-in model. Only Anthropic is wired up.
+- **Abuse.** Open to guests, limited to 40 requests per 10 minutes per address, text capped at 300 characters, no text stored.
+- **Where it shows up.** A box on the home screen (leads to `/mood?q=...`), a link at the top of the menu, and the page itself with
+  a rotating example in the empty box and four "Try" phrases. Results are one large card and two smaller ones, each with
+  Add to order and Choose options. Menu items have no photos yet, so cards show the mountain panel until the team adds them.

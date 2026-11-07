@@ -1,7 +1,48 @@
 import { describeSelections } from '@shared/modifiers'
 import type { HomeBanner, HomeEvent, MenuItem, UsualResponse } from '@shared/types'
+import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router'
 import { Button } from '../ui/Button'
+import { inputClass } from '../ui/Fields'
 import { selectionsFor } from '../../lib/reorder'
+
+/** The start of "What are you in the mood for?": type a few words here and the answer is on the next screen. */
+export function MoodEntry() {
+  const navigate = useNavigate()
+  const [text, setText] = useState('')
+  const go = (e: FormEvent) => {
+    e.preventDefault()
+    const value = text.trim()
+    navigate(value ? `/mood?q=${encodeURIComponent(value)}` : '/mood')
+  }
+  return (
+    <section aria-labelledby="mood-entry-heading">
+      <h2 id="mood-entry-heading" className="text-headline font-semibold">
+        What are you in the mood for?
+      </h2>
+      <p className="mt-1 text-body text-muted">Tell us in a few words and we will pick three drinks.</p>
+      <form onSubmit={go} className="mt-3 flex flex-wrap gap-3">
+        <label htmlFor="mood-entry-text" className="sr-only">
+          Your mood
+        </label>
+        <input
+          id="mood-entry-text"
+          type="text"
+          value={text}
+          maxLength={300}
+          autoComplete="off"
+          enterKeyHint="go"
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Rainy, tired, something sweet"
+          className={`${inputClass} min-w-0 flex-1 basis-64 border-control`}
+        />
+        <Button type="submit" size="lg" variant="secondary">
+          Find a drink
+        </Button>
+      </form>
+    </section>
+  )
+}
 
 /** "Tue 10 Nov, 17:00" in the viewer's clock. */
 export function eventWhen(iso: string | null): string {

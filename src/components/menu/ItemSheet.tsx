@@ -13,22 +13,24 @@ import { cx } from '../../lib/cx'
 interface ItemSheetProps {
   item: MenuItem | null
   onClose: () => void
+  /** Choices to start from instead of the defaults, for example the temperature the customer asked for. */
+  initialSelections?: Selections
 }
 
 /** Temperature, milk, extras, a note to the barista and a running price, with one clear button. */
-export function ItemSheet({ item, onClose }: ItemSheetProps) {
+export function ItemSheet({ item, onClose, initialSelections }: ItemSheetProps) {
   return (
     <Sheet open={!!item} onClose={onClose} title={item?.name ?? ''}>
-      {item && <SheetBody key={item.id} item={item} onClose={onClose} />}
+      {item && <SheetBody key={item.id} item={item} onClose={onClose} initialSelections={initialSelections} />}
     </Sheet>
   )
 }
 
 /** The sheet's footer lives inside the body so it can read the selections. */
-function SheetBody({ item, onClose }: { item: MenuItem; onClose: () => void }) {
+function SheetBody({ item, onClose, initialSelections }: { item: MenuItem; onClose: () => void; initialSelections?: Selections }) {
   const cart = useCart()
   const toast = useToast()
-  const [selections, setSelections] = useState<Selections>(() => defaultSelections(item.groups))
+  const [selections, setSelections] = useState<Selections>(() => initialSelections ?? defaultSelections(item.groups))
   const [note, setNote] = useState('')
   const [quantity, setQuantity] = useState(1)
   const { showPhoto, onError } = useItemPhoto(item)

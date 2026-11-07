@@ -1,6 +1,7 @@
 import type { MenuCategory, MenuItem } from '@shared/types'
 import { Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { CartBar } from '../../components/cart/CartBar'
 import { CartPanel } from '../../components/cart/CartPanel'
 import { ItemSheet } from '../../components/menu/ItemSheet'
@@ -98,8 +99,14 @@ export function MenuPage() {
           <h1 className="text-display-lg font-bold text-ink">Menu</h1>
           {queue && <p className="text-body-sm text-muted">{waitSentence(queue)}</p>}
         </div>
+        <p className="mt-1 text-body-sm text-muted">
+          Not sure what to get?{' '}
+          <Link to="/mood" className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-4">
+            Tell us your mood
+          </Link>
+        </p>
 
-        <div className="mt-4 grid gap-3">
+        <div className="mt-2 grid gap-3">
           <div className="relative">
             <label htmlFor="menu-search" className="sr-only">
               Search the menu

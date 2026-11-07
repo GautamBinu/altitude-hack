@@ -1,4 +1,5 @@
 import type { AdminItem, AdminMenu } from '@shared/admin'
+import { MOOD_TAG_GROUPS } from '@shared/moodTags'
 import type { Temperature } from '@shared/types'
 import { useState } from 'react'
 import { api } from '../../lib/api'
@@ -22,6 +23,42 @@ const TEMPERATURES: { value: Temperature; label: string }[] = [
   { value: 'iced', label: 'Iced or cold only' },
   { value: 'none', label: 'Not applicable (food)' },
 ]
+
+const splitTags = (text: string): string[] => text.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
+
+/** The words the suggester understands, as toggles on top of the tags text box. */
+function TagPicker({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const current = splitTags(value)
+  const toggle = (tag: string) => onChange((current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag]).join(', '))
+  return (
+    <div className="mt-3 grid gap-3">
+      {MOOD_TAG_GROUPS.map((group) => (
+        <div key={group.label} role="group" aria-label={group.label}>
+          <p className="mb-1.5 text-body-sm text-muted">{group.label}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {group.tags.map((tag) => {
+              const on = current.includes(tag)
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(tag)}
+                  className={
+                    'min-h-11 rounded-md border px-3 text-body-sm font-semibold transition-colors ' +
+                    (on ? 'border-accent bg-raised text-ink shadow-[inset_0_0_0_1px_var(--c-accent)]' : 'border-control text-ink hover:bg-raised')
+                  }
+                >
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function durationText(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -62,7 +99,7 @@ export function ItemEditor({ menu, item, defaultCategoryId, onClose, onChanged }
         caffeineFree,
         prepSeconds,
         kind,
-        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: splitTags(tags),
         image,
         soldOut,
         hidden,
@@ -120,8 +157,10 @@ export function ItemEditor({ menu, item, defaultCategoryId, onClose, onChanged }
 
         <Switch checked={caffeineFree} onChange={setCaffeineFree} label="Caffeine free" onText="Caffeine free" offText="Contains caffeine" />
 
-        <TextInput label="Tags" value={tags} onChange={setTags} helper="Comma separated, such as sweet, creamy, strong. They help the mood suggester find this item." />
-
+        <div>
+          <TextInput label="Tags" value={tags} onChange={setTags} helper="Comma separated. The mood suggester uses these to find this item. Tap a word below to add or remove it." />
+          <TagPicker value={tags} onChange={setTags} />
+        </div>
         {choices.length > 0 && (
           <ChoiceGroup
             legend="Choices offered"

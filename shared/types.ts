@@ -279,6 +279,24 @@ export interface QuoteResponse {
   notices: string[]
 }
 
+/* ---------- Mood suggester ---------- */
+
+export interface MoodPick {
+  itemId: number
+  /** One short line on why it fits. */
+  reason: string
+  /** For a drink served hot or iced: the one the text asked for. Null when it did not say, or there is no choice. */
+  temperature: 'hot' | 'iced' | null
+}
+
+export interface MoodResponse {
+  picks: MoodPick[]
+  /** False when nothing in the text could be read, so the picks are simply what is popular. */
+  matched: boolean
+  /** A short note to show above the picks, when there is something to say. */
+  note: string | null
+}
+
 export interface QueueStatus {
   inQueue: number
   /** Wait for a typical single drink ordered right now. */
