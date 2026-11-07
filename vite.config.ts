@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // The API, the realtime stream and the session cookies all stay same-origin in dev.
         '/api': { target: `http://localhost:${apiPort}` },
+        // Pictures uploaded from the dashboard.
+        '/uploads': { target: `http://localhost:${apiPort}` },
       },
     },
     build: { outDir: 'dist' },

@@ -55,3 +55,30 @@ left a choice open, the choice and the reason are written down so the team can c
 - **Entry points** to the mood suggester and the builder, and the link from the events preview to the events hub, are
   added in the parts that build those pages, so nothing on the home screen is a dead link.
 - **One-tap reorder** also lives on order history and on a collected order's page.
+
+## Part 3: menu manager and promotions
+
+- **Who can do what.** Admins change names, prices, descriptions, photos, tags, prep times, choices, the builder, the
+  Summit Box and promotions. Baristas can open the menu and mark items sold out, because "we ran out of oat milk" is a
+  counter job, and nothing else. This is enforced on the server, not just by hiding buttons.
+- **Edits reach customers immediately.** Every change is announced on a small public live channel
+  (`/api/stream/public`). Open apps, signed in or not, fetch the menu and home screen again within a moment.
+- **Price snapshots.** Each order line stores the item's name and the price it was sold at, so changing or deleting
+  an item never changes an old order. This is covered by a test: an order is placed, the price is changed, a second
+  order is placed, and the first still shows the old price.
+- **Setting a price confirms it.** Items with a placeholder price carry an "Unconfirmed price" label. Saving a new
+  price clears the label, and there is a filter that lists every unconfirmed price.
+- **Choices are shared.** Milk alternatives, acai bases and toppings are option groups. Change Oatly from AED 6 to
+  AED 7 once and every milk drink changes. Options are updated in place by id, so saved carts and favourites keep
+  working. A choice that an item still uses cannot be deleted.
+- **Temperature is automatic.** Marking an item "hot or iced" adds the temperature choice; any other setting removes it.
+- **Pictures.** The browser shrinks a picture to at most 1200 px before uploading. The server checks the first bytes
+  of the file (not the label the browser gives it), caps the size, and saves it under a random name in `UPLOAD_DIR`
+  (default `data/uploads`). Only addresses under `/uploads` or `/images` can be set as a picture, so no outside URL can
+  be injected. On a host with a disk, point `UPLOAD_DIR` at the disk.
+- **Drink of the Month** has a last day, after which it stops showing on its own. **Banners** can have a first and
+  last day; the home screen shows the first two that are active.
+- **Discount codes** take a percentage or a fixed amount off, with optional dates and a use limit. The order of
+  discounts is fixed and tested: Summit Box value, then code, then reward points. Cancelling gives a use back.
+- A bug found while testing: an update of only the price was resetting the description, tags and choices because of
+  how the request schema applied defaults. Fixed, with a regression check.

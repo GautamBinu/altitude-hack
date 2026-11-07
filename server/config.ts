@@ -20,6 +20,8 @@ export const config = {
   isProduction,
   port: Number(process.env.PORT || 3000),
   databasePath: resolve(process.env.DATABASE_PATH || './data/altitude.db'),
+  /** Where uploaded pictures are kept. On a host with a disk attached, point this at the disk. */
+  uploadDir: resolve(process.env.UPLOAD_DIR || './data/uploads'),
   /**
    * Demo mode adds the "Continue as demo student" button. It defaults to on for local development
    * so the app runs without Google credentials, and to off in production.

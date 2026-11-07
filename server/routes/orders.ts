@@ -11,8 +11,8 @@ export const orderRoutes = Router()
 
 // Price and time a cart without placing it. Open to guests so the cart works before sign-in.
 orderRoutes.post('/orders/quote', attachCustomer, orderLimiter, (req, res) => {
-  const { lines, rewardId } = parse(quoteSchema, req.body)
-  res.json(quoteOrder(getCustomer(res)?.id ?? null, { lines, rewardId }))
+  const { lines, rewardId, code } = parse(quoteSchema, req.body)
+  res.json(quoteOrder(getCustomer(res)?.id ?? null, { lines, rewardId, code }))
 })
 
 // Place an order. Card details are never part of this request: the card form is a prototype.

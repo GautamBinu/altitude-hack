@@ -1,6 +1,7 @@
 import type { MenuCategory, MenuItem, MenuResponse } from '@shared/types'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, ApiError, errorMessage } from '../lib/api'
+import { useLiveRefresh } from '../lib/liveEvents'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -46,6 +47,8 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       setStatus('error')
     }
   }, [])
+
+  useLiveRefresh(() => void load(true))
 
   useEffect(() => {
     void load(false)

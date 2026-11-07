@@ -1,6 +1,7 @@
 import type { HomeResponse, UsualResponse } from '@shared/types'
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError, errorMessage } from '../lib/api'
+import { useLiveRefresh } from '../lib/liveEvents'
 
 type State = { status: 'loading' } | { status: 'ready'; data: HomeResponse } | { status: 'error'; message: string; offline: boolean }
 
@@ -17,6 +18,8 @@ export function useHome() {
       setState({ status: 'error', message: errorMessage(e), offline: e instanceof ApiError && e.isOffline })
     }
   }, [])
+
+  useLiveRefresh(() => void load(true))
 
   useEffect(() => {
     void load(false)

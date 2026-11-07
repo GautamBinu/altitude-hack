@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import type { AppConfig, MenuResponse } from '../../shared/types'
 import { config } from '../config'
+import { addPublicStream } from '../realtime'
 import { loadMenu } from '../services/menu'
 import { getQueueStatus } from '../services/views'
 
@@ -20,6 +21,11 @@ publicRoutes.get('/menu', (_req, res) => {
   const body: MenuResponse = { categories: loadMenu() }
   res.set('Cache-Control', 'no-cache')
   res.json(body)
+})
+
+// Tells every open app when the menu or promotions change, so edits in the dashboard show up at once.
+publicRoutes.get('/stream/public', (req, res) => {
+  addPublicStream(req, res)
 })
 
 publicRoutes.get('/queue-status', (_req, res) => {

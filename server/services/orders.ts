@@ -16,6 +16,7 @@ import { pos } from '../pos'
 import { publishChange } from '../realtime'
 import { awardForOrder, balances, recordRedeem, resolveReward } from './loyalty'
 import { loadPricingItems } from './menu'
+import { consumeCode, resolveCode, type ResolvedCode } from './promotions'
 import { businessDate, getSettings } from './settings'
 import { getOrderForUser, getOrderRow, getStaffOrder, loadQueueEntries } from './views'
 
@@ -26,6 +27,7 @@ interface Plan {
   priced: PricedOrder
   discounts: DiscountResult
   reward: RewardDef | null
+  code: ResolvedCode | null
   notices: string[]
 }
 
@@ -41,10 +43,20 @@ function priceLines(lines: OrderLineInput[]): PricedOrder {
  * When `strict` is false (quotes) a code or reward that cannot be used becomes a friendly notice and
  * the rest of the quote stands. When it is true (placing the order) the same problem is an error.
  */
-function planOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' | 'rewardId'>, strict: boolean): Plan {
+function planOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' | 'rewardId' | 'code'>, strict: boolean): Plan {
   const priced = priceLines(input.lines)
   const notices: string[] = []
   let reward: RewardDef | null = null
+  let code: ResolvedCode | null = null
+
+  if (input.code?.trim()) {
+    try {
+      code = resolveCode(input.code)
+    } catch (error) {
+      if (strict || !(error instanceof OrderError)) throw error
+      notices.push(error.message)
+    }
+  }
 
   if (input.rewardId) {
     if (userId == null) {
@@ -60,12 +72,16 @@ function planOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' 
     }
   }
 
-  const discounts = applyDiscounts({ subtotalFils: priced.subtotalFils, rewardFils: reward?.discountFils ?? 0 })
-  return { priced, discounts, reward, notices }
+  const discounts = applyDiscounts({
+    subtotalFils: priced.subtotalFils,
+    code: code ? { kind: code.kind, value: code.value } : null,
+    rewardFils: reward?.discountFils ?? 0,
+  })
+  return { priced, discounts, reward, code, notices }
 }
 
 /** What the order would cost and how long it would take, without placing it. */
-export function quoteOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' | 'rewardId'>): QuoteResponse {
+export function quoteOrder(userId: number | null, input: Pick<CreateOrderInput, 'lines' | 'rewardId' | 'code'>): QuoteResponse {
   const plan = planOrder(userId, input, false)
   const settings = getSettings()
   const info = quoteNewOrder(plan.priced.prepSeconds, loadQueueEntries(), settings.baristas, Date.now())
@@ -126,7 +142,8 @@ export async function createOrder(
     }
 
     const plan = planOrder(customer.id, input, true)
-    const { priced, discounts, reward } = plan
+    const { priced, discounts, reward, code } = plan
+    if (code && !consumeCode(code.id)) throw new OrderError('That code has been used up.', 'code_used_up', 409)
     const state = initialState(input.paymentMethod)
     const nowIso = new Date().toISOString()
     const date = businessDate(new Date(), settings.timezone)
@@ -139,9 +156,9 @@ export async function createOrder(
       .prepare(
         `INSERT INTO orders (business_date, number, user_id, customer_name, fulfilment, table_number,
                              payment_method, payment_status, status, subtotal_fils, total_fils,
-                             reward_id, reward_points, reward_fils, prep_seconds,
+                             code, code_fils, reward_id, reward_points, reward_fils, prep_seconds,
                              created_at, confirmed_at, queue_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         date,
@@ -155,6 +172,8 @@ export async function createOrder(
         state.status,
         discounts.subtotalFils,
         discounts.totalFils,
+        code?.code ?? null,
+        discounts.codeFils,
         reward?.id ?? null,
         reward?.costPoints ?? 0,
         discounts.rewardFils,

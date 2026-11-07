@@ -15,7 +15,7 @@ function imageRoots(): string[] {
  * Returns the public URL of the item's photo, or null if the team has not added one yet.
  * A photo uploaded from the dashboard wins; otherwise a file dropped into public/images/menu.
  */
-function imageUrlFor(slug: string, uploaded: string | null): string | null {
+export function imageUrlForSlug(slug: string, uploaded: string | null): string | null {
   if (uploaded) return uploaded
   for (const root of imageRoots()) {
     for (const ext of IMAGE_EXTENSIONS) {
@@ -146,7 +146,7 @@ export function loadMenu(): MenuCategory[] {
             temperature: item.temperature,
             caffeineFree: item.caffeine_free === 1,
             soldOut: item.sold_out === 1,
-            imageUrl: imageUrlFor(item.slug, item.image),
+            imageUrl: imageUrlForSlug(item.slug, item.image),
             kind: item.kind,
             groups: groupsByItem.get(item.id) ?? [],
           }),

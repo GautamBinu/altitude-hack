@@ -26,7 +26,7 @@ const EMPTY_CARD: CardFields = { name: '', number: '', expiry: '', cvc: '' }
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
 /** The server's own price and time for this cart. The page shows these, not its local sums. */
-function useQuote(lines: CartLine[], rewardId: string | null) {
+function useQuote(lines: CartLine[], rewardId: string | null, code: string | null) {
   const orderable = useMemo(
     () =>
       lines
@@ -34,7 +34,7 @@ function useQuote(lines: CartLine[], rewardId: string | null) {
         .map((l) => ({ itemId: l.itemId, quantity: l.quantity, selections: l.selections, note: l.note || undefined })),
     [lines],
   )
-  const key = JSON.stringify({ orderable, rewardId })
+  const key = JSON.stringify({ orderable, rewardId, code })
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,7 +46,7 @@ function useQuote(lines: CartLine[], rewardId: string | null) {
     }
     let cancelled = false
     const load = () =>
-      api<QuoteResponse>('/orders/quote', { body: { lines: orderable, rewardId: rewardId ?? undefined } })
+      api<QuoteResponse>('/orders/quote', { body: { lines: orderable, rewardId: rewardId ?? undefined, code: code ?? undefined } })
         .then((q) => {
           if (cancelled) return
           setQuote(q)
@@ -143,7 +143,11 @@ export function CheckoutPage() {
 
   const loyalty = useLoyalty()
   const [rewardId, setRewardId] = useState<string | null>(null)
-  const { quote, error: quoteError } = useQuote(cart.lines, user ? rewardId : null)
+  const [codeText, setCodeText] = useState('')
+  const [appliedCode, setAppliedCode] = useState<string | null>(null)
+  const { quote, error: quoteError } = useQuote(cart.lines, user ? rewardId : null, appliedCode)
+  // The server says whether a typed code works. If it does not, the code is cleared and the reason is shown.
+  const codeNotice = appliedCode && quote && quote.codeFils === 0 ? quote.notices.find((n) => /code/i.test(n)) : undefined
   const total = quote?.totalFils ?? cart.totalFils
   const busy = stage !== 'idle'
   const canOrder = cart.count > 0 && !cart.hasProblems && !quoteError
@@ -197,6 +201,7 @@ export function CheckoutPage() {
       tableNumber: fulfilment === 'dinein' ? table.trim().toUpperCase() : undefined,
       paymentMethod: method,
       rewardId: rewardId ?? undefined,
+      code: appliedCode ?? undefined,
     }
 
     setStage('processing')
@@ -334,6 +339,39 @@ export function CheckoutPage() {
               ))}
             </section>
           )}
+
+          <section aria-labelledby="code-heading" className="mt-8 border-t border-line pt-6">
+            <h2 id="code-heading" className="mb-3 text-headline font-semibold">
+              Discount code
+            </h2>
+            {appliedCode && !codeNotice ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-body">
+                  <span className="font-display text-headline font-semibold tracking-wide">{appliedCode}</span>
+                  <span className="ml-3 text-body-sm text-muted">{quote ? (quote.codeFils > 0 ? `takes ${formatAedNumber(quote.codeFils)} AED off` : 'checking...') : 'checking...'}</span>
+                </p>
+                <Button variant="tertiary" size="md" onClick={() => { setAppliedCode(null); setCodeText('') }}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <form
+                className="flex max-w-md items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const next = codeText.trim().toUpperCase()
+                  if (next) setAppliedCode(next)
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <TextField label="Have a code?" value={codeText} onChange={(e) => setCodeText(e.target.value.toUpperCase())} maxLength={20} autoComplete="off" error={codeNotice ?? null} disabled={busy} />
+                </div>
+                <Button type="submit" variant="secondary" size="lg" disabled={busy || !codeText.trim()}>
+                  Apply
+                </Button>
+              </form>
+            )}
+          </section>
 
           <section aria-labelledby="when-heading" className="mt-8 border-t border-line pt-6">
             <h2 id="when-heading" className="mb-2 text-headline font-semibold">

@@ -15,6 +15,8 @@ import { MenuPage } from './pages/customer/MenuPage'
 import { OrderPage } from './pages/customer/OrderPage'
 import { OrdersPage } from './pages/customer/OrdersPage'
 import { SignInPage } from './pages/customer/SignInPage'
+import { MenuManagerPage } from './pages/dashboard/MenuManagerPage'
+import { PromotionsPage } from './pages/dashboard/PromotionsPage'
 import { QueuePage } from './pages/dashboard/QueuePage'
 import { StaffLoginPage } from './pages/dashboard/StaffLoginPage'
 import { CartProvider } from './state/cart'
@@ -113,6 +115,8 @@ export function App() {
               <Route path="login" element={<StaffLoginPage />} />
               <Route element={<DashboardShell />}>
                 <Route index element={<QueuePage />} />
+                <Route path="menu" element={<MenuManagerPage />} />
+                <Route path="promotions" element={<PromotionsPage />} />
               </Route>
             </Route>
 

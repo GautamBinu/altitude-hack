@@ -18,6 +18,8 @@ interface CustomerClient {
 
 const customers = new Set<CustomerClient>()
 const staff = new Set<Response>()
+/** Anyone with the app open, signed in or not. They only hear that the menu or promotions changed. */
+const everyone = new Set<Response>()
 
 function openStream(req: Request, res: Response): void {
   req.socket.setTimeout(0)
@@ -58,6 +60,18 @@ export function addStaffStream(req: Request, res: Response): void {
   staff.add(res)
   req.on('close', () => staff.delete(res))
   send(res, 'board', getBoard())
+}
+
+export function addPublicStream(req: Request, res: Response): void {
+  openStream(req, res)
+  everyone.add(res)
+  req.on('close', () => everyone.delete(res))
+  send(res, 'hello', { serverNow: new Date().toISOString() })
+}
+
+/** The menu, a price, a promotion or a post changed. Open apps fetch it again. */
+export function publishMenuChanged(): void {
+  for (const res of everyone) send(res, 'menu', { at: Date.now() })
 }
 
 let scheduled = false
@@ -102,6 +116,7 @@ function flush(): void {
 setInterval(() => {
   for (const client of customers) client.res.write(': keep-alive\n\n')
   for (const res of staff) res.write(': keep-alive\n\n')
+  for (const res of everyone) res.write(': keep-alive\n\n')
 }, 20_000).unref()
 
 // Elapsed times and ETAs move with the clock, so refresh everyone every 30 seconds too.

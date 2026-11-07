@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   signal?: AbortSignal
 }
@@ -26,9 +26,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   let response: Response
   try {
     response = await fetch(`/api${path}`, {
-      method: options.method ?? (options.body ? 'POST' : 'GET'),
-      headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      method: options.method ?? (options.body !== undefined ? 'POST' : 'GET'),
+      headers: options.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       signal: options.signal,
       credentials: 'same-origin',
     })

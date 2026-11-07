@@ -5,6 +5,7 @@ import express from 'express'
 import { purgeExpiredSessions } from './auth'
 import { config } from './config'
 import { errorHandler, originGuard } from './http'
+import { adminMenuRoutes } from './routes/adminMenu'
 import { authRoutes } from './routes/auth'
 import { dashboardRoutes } from './routes/dashboard'
 import { homeRoutes } from './routes/home'
@@ -31,10 +32,17 @@ app.use((_req, res, next) => {
   })
   next()
 })
-app.use(express.json({ limit: '32kb' }))
+// Almost everything is small JSON. Pictures arrive as data URLs on two routes, which get a bigger limit.
+const smallJson = express.json({ limit: '32kb' })
+const largeJson = express.json({ limit: '2mb' })
+const LARGE_BODY = /^\/api\/(dashboard\/uploads|events)$/
+app.use((req, res, next) => (LARGE_BODY.test(req.path) ? largeJson : smallJson)(req, res, next))
 app.use(cookieParser())
 
-app.use('/api', originGuard, publicRoutes, authRoutes, homeRoutes, meRoutes, orderRoutes, dashboardRoutes)
+// Pictures uploaded from the dashboard and by event organisers. Names are random, so they can be cached for good.
+app.use('/uploads', express.static(config.uploadDir, { maxAge: '30d', immutable: true, index: false, fallthrough: true }))
+
+app.use('/api', originGuard, publicRoutes, authRoutes, homeRoutes, meRoutes, orderRoutes, dashboardRoutes, adminMenuRoutes)
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found.', code: 'not_found' })
 })

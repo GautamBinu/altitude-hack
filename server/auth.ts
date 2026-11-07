@@ -180,3 +180,14 @@ export function requireStaff(req: Request, res: Response, next: NextFunction): v
 export function getStaff(res: Response): StaffUser {
   return res.locals.staff as StaffUser
 }
+
+/** Menu, prices, promotions, moderation and settings are for admins. Baristas run the counter. */
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  requireStaff(req, res, () => {
+    if (getStaff(res).role !== 'admin') {
+      res.status(403).json({ error: 'Only an admin can do that.', code: 'forbidden' })
+      return
+    }
+    next()
+  })
+}

@@ -12,14 +12,9 @@ import {
 import { SEED_BUILDER, SEED_CODE, SEED_POSTS, SEED_PROMOS } from './seed-content'
 import { DEFAULT_REWARDS, DEFAULT_TIERS } from '../shared/loyalty'
 import { addDays, businessDate, getSettings, zonedTimeToUtc } from './services/settings'
+import { slugify } from './slug'
 
-export function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
+export { slugify }
 
 const now = () => new Date().toISOString()
 
