@@ -29,7 +29,13 @@ export const config = {
   demoMode: (process.env.DEMO_MODE ?? (isProduction ? 'false' : 'true')).toLowerCase() === 'true',
   googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || null,
   allowedEmailDomains: list(process.env.ALLOWED_EMAIL_DOMAINS),
-  /** Optional. When set, the mood suggester asks a model to read the text. Without it, the local scorer does the job. */
+  /**
+   * Optional. When a key is set, the mood suggester asks a model to read the text. Without one, the local
+   * scorer does the job. Gemini is used first; Anthropic is the alternative if only that key is set.
+   */
+  geminiApiKey: process.env.GEMINI_API_KEY?.trim() || null,
+  geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash',
+  geminiBaseUrl: (process.env.GEMINI_BASE_URL?.trim() || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, ''),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim() || null,
   anthropicModel: process.env.ANTHROPIC_MODEL?.trim() || 'claude-haiku-4-5',
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD || 'altitude-admin',

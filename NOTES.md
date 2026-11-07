@@ -139,7 +139,7 @@ left a choice open, the choice and the reason are written down so the team can c
   fewer than three survive, the local scorer fills the rest. A timeout (8 s), an error or a nonsense reply silently falls back
   to the local scorer. The response never says which engine answered, and the UI has no "AI" label. **The live model call
   has not been run**, because there is no key in this workspace. The prompt builder, reply checker and fallback are
-  covered by unit tests with a stand-in model. Only Anthropic is wired up.
+  covered by unit tests with a stand-in model. Gemini was added afterwards, see "Mood suggester via Gemini" below.
 - **Abuse.** Open to guests, limited to 40 requests per 10 minutes per address, text capped at 300 characters, no text stored.
 - **Where it shows up.** A box on the home screen (leads to `/mood?q=...`), a link at the top of the menu, and the page itself with
   a rotating example in the empty box and four "Try" phrases. Results are one large card and two smaller ones, each with
@@ -207,3 +207,30 @@ left a choice open, the choice and the reason are written down so the team can c
   be taken down in Review.
 - **Not done.** Authors cannot edit a post after sending it (they take it back and send it again). There is no notification to the sender when
   the team decides; Part 9 adds push notifications for orders only. Guests cannot recover a post's status on another device.
+
+## Mood suggester via Gemini, Google sign-in setup, side navigation
+
+- **Side navigation.** "Create your own" sits right after Menu in the customer side rail (icon: sliders). On the narrow rail and the
+  phone tab bar the label shortens to "Create" so six tabs still fit at 375 px; the tooltip and screen-reader label read
+  "Create your own coffee". The full phrase would wrap in the 232 px rail.
+- **Gemini.** `server/domain/gemini.ts` calls the Generative Language REST API (`models/{model}:generateContent`). The key goes in the
+  `x-goog-api-key` header, never the URL, so it cannot end up in a log line. The reply is asked for as JSON with a schema. No
+  temperature is sent, because current Gemini models ignore it or warn. Thinking is kept low so the answer comes back fast. A 400
+  is retried once with a plain body (older models reject newer fields); 401, 403, 429, 5xx and the 10 s timeout fall straight back
+  to the local scorer. Default model is `gemini-3.8-flash` (`GEMINI_MODEL` changes it). `GEMINI_BASE_URL` exists for tests.
+- **Which engine.** Gemini if `GEMINI_API_KEY` is set, else Anthropic if `ANTHROPIC_API_KEY` is set, else the local scorer only.
+  Every model reply goes through the same checker as before, so a made-up item id or an off-menu drink is dropped.
+- **Privacy.** With a key set, the customer's mood text and the available menu are sent to Google. The UI does not say which
+  engine answered. Add this to the privacy wording if the team publishes one.
+- **Google sign-in.** The ID token is verified on the server with `google-auth-library` against `GOOGLE_CLIENT_ID`. The rules for what to
+  do with a verified profile (unverified email rejected, domain allow-list, https-only profile picture) are pure code in
+  `server/domain/google.ts` with tests. `ALLOWED_EMAIL_DOMAINS` is an exact match on the part after `@`. The client secret is not
+  used and not needed. The sign-in button is forced to English, and a hint shows after 4 s if Google's script did not draw it
+  (usually a missing authorised origin).
+- **Setup check.** `npm run check:setup` reads `.env`, checks the shape of the Google client ID, lists the origins to authorise, and
+  makes one real model call when a key is set. It exits 1 if that call fails.
+- **Not verified live.** No Gemini key or Google client ID was available here. The Gemini wiring was checked against a local stand-in
+  server (header, path, body shape, fenced JSON, 400 retry, 429 fallback, timeout fallback). Google's script loads and
+  rejects a fake client ID as expected, and a forged token is rejected with 401. Run `npm run check:setup` once real keys are in.
+- **Rate limits** were raised for the campus network, where many students share one address: sign-in 300 per 15 minutes, orders 1500
+  per 10 minutes, mood 200 per 10 minutes, builder writes 600 per 10 minutes, event submissions 40 per hour (successful ones only).

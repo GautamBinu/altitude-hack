@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 import express from 'express'
 import { purgeExpiredSessions } from './auth'
 import { config } from './config'
+import { looksLikeGoogleClientId } from './domain/google'
 import { errorHandler, originGuard } from './http'
 import { adminMenuRoutes } from './routes/adminMenu'
 import { authRoutes } from './routes/auth'
@@ -17,6 +18,7 @@ import { moodRoutes } from './routes/mood'
 import { orderRoutes } from './routes/orders'
 import { publicRoutes } from './routes/public'
 import { ensureSeeded } from './seed'
+import { describeModel } from './services/llm'
 import { releaseDueOrders } from './services/orders'
 
 const seeded = ensureSeeded()
@@ -77,6 +79,11 @@ app.use(errorHandler)
 app.listen(config.port, '0.0.0.0', () => {
   console.log(`[server] API listening on http://localhost:${config.port}`)
   console.log(`[server] demo sign-in: ${config.demoMode ? 'on' : 'off'}, google sign-in: ${config.googleClientId ? 'configured' : 'not configured'}`)
+  if (config.googleClientId && !looksLikeGoogleClientId(config.googleClientId)) {
+    console.warn('[server] GOOGLE_CLIENT_ID does not look right. It should end in .apps.googleusercontent.com. Copy it from Google Cloud Console, Credentials.')
+  }
+  if (config.allowedEmailDomains.length > 0) console.log(`[server] sign-in limited to: ${config.allowedEmailDomains.map((d) => '@' + d).join(', ')}`)
+  console.log(`[server] mood suggester: ${describeModel()}`)
   if (!existsSync(resolve(dist, 'index.html'))) {
     console.log('[server] no build found. In development open the web app at http://localhost:5173')
   }

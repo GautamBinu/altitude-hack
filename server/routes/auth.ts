@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { OAuth2Client } from 'google-auth-library'
 import { getCustomer, attachCustomer, signInCustomer, signOutCustomer } from '../auth'
 import { config } from '../config'
+import { decideGoogleSignIn } from '../domain/google'
 import { OrderError } from '../domain/pricing'
 import { authLimiter, googleSignInSchema, parse } from '../http'
 
@@ -29,32 +30,9 @@ authRoutes.post('/auth/google', authLimiter, async (req, res) => {
   } catch {
     throw new OrderError("We couldn't verify that Google sign-in. Try again.", 'invalid_token', 401)
   }
-  if (!payload?.sub || !payload.email || payload.email_verified !== true) {
-    throw new OrderError('Use a Google account with a verified email.', 'unverified_email', 401)
-  }
-
-  if (config.allowedEmailDomains.length > 0) {
-    const domain = payload.email.split('@')[1]?.toLowerCase() ?? ''
-    if (!config.allowedEmailDomains.includes(domain)) {
-      throw new OrderError(
-        `Sign in with your university account (${config.allowedEmailDomains.map((d) => `@${d}`).join(', ')}).`,
-        'domain_not_allowed',
-        403,
-      )
-    }
-  }
-
-  const name = payload.name?.trim() || payload.email.split('@')[0]
-  const firstName = payload.given_name?.trim() || name.split(/\s+/)[0]
-  const user = signInCustomer(res, {
-    sub: `google:${payload.sub}`,
-    email: payload.email,
-    name,
-    firstName,
-    pictureUrl: payload.picture ?? null,
-    isDemo: false,
-  })
-  res.json({ user })
+  const decision = decideGoogleSignIn(payload, config.allowedEmailDomains)
+  if (!decision.ok) throw new OrderError(decision.message, decision.code, decision.status)
+  res.json({ user: signInCustomer(res, decision.profile) })
 })
 
 // Demo sign-in exists so the app can be shown without Google credentials. It is off unless DEMO_MODE=true.

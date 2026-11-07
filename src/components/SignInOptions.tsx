@@ -42,6 +42,7 @@ function GoogleButton({ clientId, onCredential, onError }: { clientId: string; o
 
   useEffect(() => {
     let cancelled = false
+    let check: number | undefined
     loadGoogleScript()
       .then(() => {
         if (cancelled || !ref.current || !window.google) return
@@ -54,12 +55,23 @@ function GoogleButton({ clientId, onCredential, onError }: { clientId: string; o
           text: 'continue_with',
           shape: 'rectangular',
           logo_alignment: 'left',
+          // The app is in English, so the button should be too, whatever language the browser is set to.
+          locale: 'en',
           width: Math.min(ref.current.clientWidth || 320, 400),
         })
+        // Google draws the button itself. If nothing appears, the client id or the address is usually not set up.
+        check = window.setTimeout(() => {
+          if (!cancelled && ref.current && ref.current.childElementCount === 0) {
+            onError(
+              "Google's sign-in button didn't appear. Check that GOOGLE_CLIENT_ID is correct and that this site's address (for example http://localhost:5173) is listed under Authorised JavaScript origins for it.",
+            )
+          }
+        }, 4000)
       })
       .catch((e: unknown) => onError(errorMessage(e)))
     return () => {
       cancelled = true
+      window.clearTimeout(check)
     }
   }, [clientId, theme, onCredential, onError])
 

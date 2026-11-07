@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag, User } from 'lucide-react'
+import { CalendarDays, ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag, SlidersHorizontal, User } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { cx } from '../../lib/cx'
 import { useCart } from '../../state/cart'
@@ -10,13 +10,25 @@ import { ThemeToggle } from '../ThemeToggle'
 import { useOrderCopy } from '../useOrderCopy'
 import type { OrderView } from '@shared/types'
 
-const NAV = [
+interface NavEntry {
+  to: string
+  label: string
+  /** A shorter label for the narrow tablet rail and the phone tab bar, where the full one will not fit. */
+  short?: string
+  /** The full name, shown as a tooltip when the label is shortened. */
+  title?: string
+  icon: typeof House
+  end: boolean
+}
+
+const NAV: readonly NavEntry[] = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/menu', label: 'Menu', icon: Coffee, end: false },
+  { to: '/build', label: 'Create your own', short: 'Create', title: 'Create your own coffee', icon: SlidersHorizontal, end: false },
   { to: '/orders', label: 'Orders', icon: ClipboardList, end: false },
   { to: '/events', label: 'Events', icon: CalendarDays, end: false },
   { to: '/profile', label: 'Profile', icon: User, end: false },
-] as const
+]
 
 function CartLink({ className }: { className?: string }) {
   const { count } = useCart()
@@ -87,11 +99,12 @@ function Rail() {
         </Link>
       </div>
       <nav aria-label="Main" className="flex flex-1 flex-col gap-1 px-3">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.map(({ to, label, short, title, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
+            title={title}
             className={({ isActive }) =>
               cx(
                 'relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-md px-2 text-body-sm font-semibold transition-colors lg:min-h-12 lg:flex-row lg:justify-start lg:gap-3 lg:px-3',
@@ -103,7 +116,14 @@ function Rail() {
               <>
                 {isActive && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" aria-hidden="true" />}
                 <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
-                <span>{label}</span>
+                {short ? (
+                  <span>
+                    <span className="lg:hidden">{short}</span>
+                    <span className="hidden lg:inline">{label}</span>
+                  </span>
+                ) : (
+                  <span>{label}</span>
+                )}
                 {to === '/orders' && <OrdersBadge count={active.length} />}
               </>
             )}
@@ -172,11 +192,12 @@ function TabBar() {
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
       <ul className="grid" style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}>
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.map(({ to, label, short, icon: Icon, end }) => (
           <li key={to}>
             <NavLink
               to={to}
               end={end}
+              aria-label={short ? label : undefined}
               className={({ isActive }) =>
                 cx(
                   'relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-body-sm font-semibold transition-colors',
@@ -195,7 +216,7 @@ function TabBar() {
                       </span>
                     )}
                   </span>
-                  {label}
+                  {short ?? label}
                 </>
               )}
             </NavLink>
