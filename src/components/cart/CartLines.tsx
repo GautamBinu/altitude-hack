@@ -9,7 +9,7 @@ export function CartLines() {
   return (
     <ul className="divide-y divide-line">
       {lines.map((line) => {
-        const name = line.item?.name ?? 'This item'
+        const name = line.name
         return (
           <li key={line.key} className="grid gap-3 py-4 first:pt-0 last:pb-0">
             <div className="flex items-start justify-between gap-4">
@@ -24,7 +24,11 @@ export function CartLines() {
               <div className="flex items-center justify-between gap-3">
                 <p className="flex items-center gap-2 text-body-sm text-danger">
                   <TriangleAlert size={16} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
-                  {line.problem === 'sold_out' ? `${name} just sold out.` : `${name} is no longer on the menu.`}
+                  {line.problem === 'sold_out'
+                    ? `${name} just sold out.`
+                    : line.problem === 'unavailable'
+                      ? `${name} can't be made right now. Something in it is off the list.`
+                      : `${name} is no longer on the menu.`}
                 </p>
                 <button type="button" onClick={() => remove(line.key)} className="min-h-11 px-2 text-body-sm font-semibold text-ink underline underline-offset-4">
                   Remove

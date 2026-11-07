@@ -12,14 +12,17 @@ import { HomePage } from './pages/customer/HomePage'
 import { LoyaltyPage } from './pages/customer/LoyaltyPage'
 import { ProfilePage } from './pages/customer/ProfilePage'
 import { MenuPage } from './pages/customer/MenuPage'
+import { BuilderPage } from './pages/customer/BuilderPage'
 import { MoodPage } from './pages/customer/MoodPage'
 import { OrderPage } from './pages/customer/OrderPage'
 import { OrdersPage } from './pages/customer/OrdersPage'
 import { SignInPage } from './pages/customer/SignInPage'
 import { MenuManagerPage } from './pages/dashboard/MenuManagerPage'
+import { ModerationPage } from './pages/dashboard/ModerationPage'
 import { PromotionsPage } from './pages/dashboard/PromotionsPage'
 import { QueuePage } from './pages/dashboard/QueuePage'
 import { StaffLoginPage } from './pages/dashboard/StaffLoginPage'
+import { BuilderProvider } from './state/builder'
 import { CartProvider } from './state/cart'
 import { LoyaltyProvider } from './state/loyalty'
 import { MenuProvider } from './state/menu'
@@ -40,13 +43,15 @@ function CustomerApp() {
   }
   return (
     <MenuProvider>
-      <CartProvider>
-        <OrdersProvider>
-          <LoyaltyProvider>
-            <CustomerShell />
-          </LoyaltyProvider>
-        </OrdersProvider>
-      </CartProvider>
+      <BuilderProvider>
+        <CartProvider>
+          <OrdersProvider>
+            <LoyaltyProvider>
+              <CustomerShell />
+            </LoyaltyProvider>
+          </OrdersProvider>
+        </CartProvider>
+      </BuilderProvider>
     </MenuProvider>
   )
 }
@@ -105,6 +110,7 @@ export function App() {
               <Route index element={<HomePage />} />
               <Route path="menu" element={<MenuPage />} />
               <Route path="mood" element={<MoodPage />} />
+              <Route path="build" element={<BuilderPage />} />
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="orders/:id" element={<OrderPage />} />
@@ -119,6 +125,7 @@ export function App() {
                 <Route index element={<QueuePage />} />
                 <Route path="menu" element={<MenuManagerPage />} />
                 <Route path="promotions" element={<PromotionsPage />} />
+                <Route path="review" element={<ModerationPage />} />
               </Route>
             </Route>
 

@@ -1,4 +1,5 @@
 import type {
+  CreationConfig,
   HomeBanner,
   HomeDrinkOfMonth,
   HomeEvent,
@@ -106,10 +107,10 @@ export function getUsual(userId: number): UsualResponse {
   if (lastOrder) {
     const lines = db
       .prepare(
-        `SELECT item_id, quantity, selections, note FROM order_items
-         WHERE order_id = ? AND item_id IS NOT NULL AND selections IS NOT NULL ORDER BY id`,
+        `SELECT item_id, quantity, selections, note, creation FROM order_items
+         WHERE order_id = ? AND ((item_id IS NOT NULL AND selections IS NOT NULL) OR creation IS NOT NULL) ORDER BY id`,
       )
-      .all(lastOrder.id) as { item_id: number; quantity: number; selections: string; note: string | null }[]
+      .all(lastOrder.id) as { item_id: number | null; quantity: number; selections: string | null; note: string | null; creation: string | null }[]
     if (lines.length > 0) {
       last = {
         orderId: lastOrder.id,
@@ -117,8 +118,9 @@ export function getUsual(userId: number): UsualResponse {
         lines: lines.map((l) => ({
           itemId: l.item_id,
           quantity: l.quantity,
-          selections: JSON.parse(l.selections) as Record<string, number[]>,
+          selections: l.selections ? (JSON.parse(l.selections) as Record<string, number[]>) : {},
           note: l.note,
+          creation: l.creation ? (JSON.parse(l.creation) as CreationConfig & { name: string }) : null,
         })),
       }
     }

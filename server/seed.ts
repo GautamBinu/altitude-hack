@@ -11,6 +11,8 @@ import {
 } from './seed-data'
 import { SEED_BUILDER, SEED_CODE, SEED_POSTS, SEED_PROMOS } from './seed-content'
 import { DEFAULT_REWARDS, DEFAULT_TIERS } from '../shared/loyalty'
+import { describeCreation } from '../shared/builder'
+import { loadBuilderData } from './services/builder'
 import { addDays, businessDate, getSettings, zonedTimeToUtc } from './services/settings'
 import { seedTagsBySlug, tagsFor } from './seed-mood'
 import { slugify } from './slug'
@@ -196,6 +198,43 @@ function addMoodTags(): void {
   }
 }
 
+/** Invented examples so the community board is not empty on day one. They are marked as samples. */
+const SAMPLE_CREATIONS = [
+  { name: 'Pink Hour', base: 'Latte', temperature: 'iced', flavour: 'Rose', shots: 0, sweetness: 'Light', topping: 'Whipped cream' },
+  { name: 'Desert Gold', base: 'Flat white', temperature: 'hot', flavour: 'Saffron', shots: 1, sweetness: 'Regular', topping: 'Crushed pistachio' },
+  { name: 'The Summit', base: 'Cold brew style', temperature: 'iced', flavour: 'Dark caramel', shots: 1, sweetness: 'Extra sweet', topping: 'Cocoa dust' },
+] as const
+
+function seedCreations(): void {
+  const data = loadBuilderData()
+  const authors = db.prepare(`SELECT id FROM users WHERE is_demo = 1 AND google_sub != 'demo:student' ORDER BY id LIMIT 3`).all() as { id: number }[]
+  const pick = (list: { id: number; name: string }[], name: string) => list.find((o) => o.name.toLowerCase() === name.toLowerCase())?.id ?? null
+  const insert = db.prepare(
+    `INSERT INTO creations (user_id, name, config, favourite, submit_status, submitted_at, decided_at, is_sample, created_at)
+     VALUES (?, ?, ?, 1, 'approved', ?, ?, 1, ?)`,
+  )
+  SAMPLE_CREATIONS.forEach((sample, i) => {
+    const author = authors[i]
+    const baseId = pick(data.bases, sample.base)
+    if (!author || baseId == null) return
+    const described = describeCreation(
+      {
+        baseId,
+        temperature: sample.temperature,
+        milkOptionId: null,
+        flavourId: pick(data.flavours, sample.flavour),
+        extraShots: sample.shots,
+        sweetnessId: pick(data.sweetness, sample.sweetness),
+        toppingId: pick(data.toppings, sample.topping),
+      },
+      data,
+    )
+    if (!described.ok) return
+    const at = new Date(Date.now() - (i + 1) * 86_400_000).toISOString()
+    insert.run(author.id, sample.name, JSON.stringify(described.config), at, at, at)
+  })
+}
+
 function seedBuilder(): void {
   const insert = db.prepare(
     `INSERT INTO builder_options (kind, name, price_fils, color, temperature, uses_milk, prep_seconds, unconfirmed, sort_order)
@@ -297,6 +336,7 @@ function seedAll(): void {
   })
   runStep('promos', seedPromos)
   runStep('events', seedEvents)
+  runStep('creations', seedCreations)
 }
 
 export function seedDatabase(options: { reset?: boolean } = {}): void {

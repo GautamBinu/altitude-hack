@@ -144,3 +144,35 @@ left a choice open, the choice and the reason are written down so the team can c
 - **Where it shows up.** A box on the home screen (leads to `/mood?q=...`), a link at the top of the menu, and the page itself with
   a rotating example in the empty box and four "Try" phrases. Results are one large card and two smaller ones, each with
   Add to order and Choose options. Menu items have no photos yet, so cards show the mountain panel until the team adds them.
+
+## Part 6: create your own coffee
+
+- **One set of rules, shared.** `shared/builder.ts` holds `describeCreation`, which checks a recipe against the options on offer and
+  returns its price, prep time and a description. The browser runs it for the live price and the cup. The server runs the same
+  function on the options in its database to price the real order. A price sent by the browser is ignored (tested), and a
+  recipe that cannot be made is refused with a plain reason.
+- **What can go together.** Hot or iced follows the base and flavour (cold brew is iced only, strawberry is iced only; the page
+  greys out what does not fit and says why). Up to two extra shots at the shot price. A drink takes milk when its base or its
+  flavour does, because Spanish is made with condensed milk; the milk choices and the AED 6 alternative-milk price come from
+  the menu's own Milk choice, so changing that in the dashboard changes the builder too. Milk on a black drink is ignored.
+- **Orders.** A custom coffee is an order line with no menu item. It is saved with its recipe (so Order again works), its
+  name, its description for the barista (for example "Iced, Latte, Oatly, Rose, 2 extra shots, Sweetness: Light") and its
+  own category, `creations`, for the statistics. It counts as a drink, so a Summit Box can pay for it. The name is cleaned
+  (40 characters, no emoji or control characters) and shown to the barista, so the dashboard's Review screen exists to
+  catch unsuitable names before they reach the community board; the barista still sees a name on an order that was never shared.
+- **The cart** keeps either a menu item or a creation. Old saved carts keep working. If an ingredient is removed after a
+  coffee is in the cart or in favourites, the line says it cannot be made right now instead of failing at checkout.
+- **Favourites.** Saving a creation is the same as favouriting it (the spec's "save to favourites"). Drinks can be favourited from the
+  item sheet. Both show under Favourites on the Profile screen with Add, Change and Remove. A customer can keep 30 creations.
+- **Community board.** A signed-in customer can share a saved creation. At most 3 wait for review at once. In the dashboard, the
+  Review screen (admin only) lets the team fix the name and approve, or turn it down with a reason the customer sees next to
+  the coffee, or take an approved one off the board. Approved creations show on Home (three newest) and under the builder.
+  A creation that uses something that has since been removed drops off the board until it can be made again. Deleting your own
+  creation also removes it from the board.
+- **Samples.** Three invented community creations (Pink Hour, Desert Gold, The Summit) are seeded with a "Sample" label, credited to
+  seeded demo students. The team can take them off the board in Review. The line about the best ones becoming a signature drink
+  comes from the brief; nobody at Altitude has agreed to it.
+- **Limits.** Rate limits were raised for everything (orders 1,500, mood 200, builder writes 600 per 10 minutes, sign-in 300 per 15
+  minutes). A campus can share one public address, and the first values would have locked out a classroom.
+- **Not done here.** The cup is an illustration drawn from the options' colours, not a photograph. There is no "surprise me"
+  button on the builder. Dashboard Review for events is added in Part 7 on the same screen.

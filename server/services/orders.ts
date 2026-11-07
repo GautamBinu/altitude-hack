@@ -15,6 +15,7 @@ import { forecastScheduled, quoteNewOrder } from '../domain/queue'
 import { pos } from '../pos'
 import { publishChange } from '../realtime'
 import { awardForOrder, balances, recordRedeem, recordRefund, resolveReward } from './loyalty'
+import { makeCreationPricer } from './builder'
 import { loadPricingItems } from './menu'
 import { consumeCode, releaseCode, resolveCode, type ResolvedCode } from './promotions'
 import { businessDate, getSettings } from './settings'
@@ -36,7 +37,7 @@ type PlanInput = Pick<CreateOrderInput, 'lines' | 'rewardId' | 'code'>
 
 function priceLines(lines: OrderLineInput[]): PricedOrder {
   const items = loadPricingItems(lines.flatMap((l) => (l.itemId != null ? [l.itemId] : [])))
-  return priceOrder(items, lines)
+  return priceOrder(items, lines, makeCreationPricer())
 }
 
 /**

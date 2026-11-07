@@ -189,7 +189,11 @@ export interface HomeResponse {
 
 export interface UsualResponse {
   usual: { itemId: number; selections: Record<string, number[]>; note: string | null; count: number } | null
-  last: { orderId: number; number: number; lines: { itemId: number; quantity: number; selections: Record<string, number[]>; note: string | null }[] } | null
+  last: {
+    orderId: number
+    number: number
+    lines: { itemId: number | null; quantity: number; selections: Record<string, number[]>; note: string | null; creation: (CreationConfig & { name: string }) | null }[]
+  } | null
 }
 
 export interface QueueInfo {

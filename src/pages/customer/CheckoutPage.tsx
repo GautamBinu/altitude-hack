@@ -17,7 +17,7 @@ import { useToast } from '../../components/ui/Toast'
 import { api, errorMessage } from '../../lib/api'
 import { validateCard, type CardErrors, type CardFields } from '../../lib/card'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
-import { useCart, type CartLine } from '../../state/cart'
+import { toOrderLines, useCart, type CartLine } from '../../state/cart'
 import { useLoyalty } from '../../state/loyalty'
 import { useSlots } from '../../state/slots'
 import { useOrders } from '../../state/orders'
@@ -30,10 +30,7 @@ const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve,
 /** The server's own price and time for this cart. The page shows these, not its local sums. */
 function useQuote(lines: CartLine[], rewardId: string | null, code: string | null, pickupAt: string | null) {
   const orderable = useMemo(
-    () =>
-      lines
-        .filter((l) => !l.problem && l.item)
-        .map((l) => ({ itemId: l.itemId, quantity: l.quantity, selections: l.selections, note: l.note || undefined })),
+    () => toOrderLines(lines.filter((l) => !l.problem && (l.item || l.creation))),
     [lines],
   )
   const key = JSON.stringify({ orderable, rewardId, code, pickupAt })
@@ -199,12 +196,7 @@ export function CheckoutPage() {
 
     // Card data stops here. The request below says "card" and nothing more.
     const body: CreateOrderInput = {
-      lines: cart.lines.filter((l) => !l.problem).map((l) => ({
-        itemId: l.itemId,
-        quantity: l.quantity,
-        selections: l.selections,
-        note: l.note || undefined,
-      })),
+      lines: toOrderLines(cart.lines.filter((l) => !l.problem)),
       fulfilment,
       tableNumber: fulfilment === 'dinein' ? table.trim().toUpperCase() : undefined,
       paymentMethod: method,

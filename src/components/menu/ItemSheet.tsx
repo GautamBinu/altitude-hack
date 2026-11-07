@@ -2,6 +2,8 @@ import type { MenuItem } from '@shared/types'
 import { useMemo, useState } from 'react'
 import { defaultSelections, selectionsComplete, unitPriceFils, type Selections } from '../../lib/pricing'
 import { useCart } from '../../state/cart'
+import { useSession } from '../../state/session'
+import { FavouriteToggle } from './FavouriteToggle'
 import { Button } from '../ui/Button'
 import { ChoiceGroup, inputClass, Stepper, type Choice } from '../ui/Fields'
 import { Price, PriceDelta } from '../ui/Price'
@@ -30,6 +32,7 @@ export function ItemSheet({ item, onClose, initialSelections }: ItemSheetProps) 
 function SheetBody({ item, onClose, initialSelections }: { item: MenuItem; onClose: () => void; initialSelections?: Selections }) {
   const cart = useCart()
   const toast = useToast()
+  const { user } = useSession()
   const [selections, setSelections] = useState<Selections>(() => initialSelections ?? defaultSelections(item.groups))
   const [note, setNote] = useState('')
   const [quantity, setQuantity] = useState(1)
@@ -51,6 +54,7 @@ function SheetBody({ item, onClose, initialSelections }: { item: MenuItem; onClo
           <ItemImage item={item} showPhoto onPhotoError={onError} className="aspect-[16/9] w-full rounded-lg" />
         )}
         <p className="text-body text-muted">{item.description}</p>
+        {user && <FavouriteToggle itemId={item.id} name={item.name} />}
 
         {item.groups.map((group) => {
           const choices: Choice[] = group.options.map((option) => ({

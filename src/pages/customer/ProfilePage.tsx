@@ -1,6 +1,7 @@
 import { ChevronRight, LogOut } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { LoyaltyCard } from '../../components/loyalty/LoyaltyCard'
+import { FavouritesSection } from '../../components/profile/Favourites'
 import { SignInOptions } from '../../components/SignInOptions'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { Button } from '../../components/ui/Button'
@@ -53,6 +54,8 @@ export function ProfilePage() {
           <LoyaltyCard summary={summary} />
         </div>
       )}
+
+      <FavouritesSection />
 
       <nav aria-label="Your things" className="mt-8 divide-y divide-line border-y border-line">
         <Link to="/loyalty" className="flex min-h-14 items-center justify-between gap-4 text-body font-semibold hover:text-accent">

@@ -104,6 +104,11 @@ export function MenuPage() {
           <Link to="/mood" className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-4">
             Tell us your mood
           </Link>
+          , or{' '}
+          <Link to="/build" className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-4">
+            build your own
+          </Link>
+          .
         </p>
 
         <div className="mt-2 grid gap-3">

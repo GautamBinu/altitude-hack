@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { DrinkOfMonth } from '../../components/home/DrinkOfMonth'
 import { PopularList } from '../../components/home/PopularList'
-import { Banners, EventsPreview, MoodEntry, ReorderSection } from '../../components/home/Sections'
+import { Banners, BuildEntry, EventsPreview, MoodEntry, ReorderSection } from '../../components/home/Sections'
 import { LoyaltyCard } from '../../components/loyalty/LoyaltyCard'
 import { Logo } from '../../components/Logo'
 import { ItemSheet } from '../../components/menu/ItemSheet'
@@ -121,6 +121,7 @@ export function HomePage() {
         )}
 
         <MoodEntry />
+        <BuildEntry />
 
         {dotm && <DrinkOfMonth promo={dotm} item={dotmItem} onOrder={setSelected} />}
 

@@ -2,9 +2,29 @@ import { describeSelections } from '@shared/modifiers'
 import type { HomeBanner, HomeEvent, MenuItem, UsualResponse } from '@shared/types'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { Button } from '../ui/Button'
+import { CommunityBoard, useCommunity } from '../builder/Community'
+import { Button, LinkButton } from '../ui/Button'
 import { inputClass } from '../ui/Fields'
 import { selectionsFor } from '../../lib/reorder'
+
+/** A way into the coffee builder, with the best of what other students have made underneath. */
+export function BuildEntry() {
+  const community = useCommunity()
+  return (
+    <>
+      <section aria-labelledby="build-entry-heading">
+        <h2 id="build-entry-heading" className="text-headline font-semibold">
+          Create your own coffee
+        </h2>
+        <p className="mt-1 text-body text-muted">Choose the base, milk, flavour and topping, and watch the cup fill.</p>
+        <LinkButton to="/build" variant="secondary" size="lg" className="mt-3">
+          Build yours
+        </LinkButton>
+      </section>
+      <CommunityBoard creations={community} heading="From the community" limit={3} />
+    </>
+  )
+}
 
 /** The start of "What are you in the mood for?": type a few words here and the answer is on the next screen. */
 export function MoodEntry() {
@@ -62,7 +82,9 @@ interface UsualProps {
 export function ReorderSection({ usual, itemsById, onOrderUsual, onOrderLast }: UsualProps) {
   const item = usual.usual ? itemsById.get(usual.usual.itemId) : undefined
   const showUsual = !!usual.usual && !!item && !item.soldOut
-  const lastLines = usual.last?.lines.filter((l) => itemsById.get(l.itemId) && !itemsById.get(l.itemId)!.soldOut) ?? []
+  const menuItem = (itemId: number | null) => (itemId != null ? itemsById.get(itemId) : undefined)
+  const lastLines = usual.last?.lines.filter((l) => l.creation || (menuItem(l.itemId) && !menuItem(l.itemId)!.soldOut)) ?? []
+  const lineName = (l: (typeof lastLines)[number]) => l.creation?.name ?? menuItem(l.itemId)?.name ?? ''
   const showLast = lastLines.length > 0 && !!usual.last
   if (!showUsual && !showLast) return null
 
@@ -90,7 +112,7 @@ export function ReorderSection({ usual, itemsById, onOrderUsual, onOrderLast }: 
             <div className="min-w-0">
               <p className="text-title font-semibold leading-snug">Last order, #{usual.last.number}</p>
               <p className="truncate text-body-sm text-muted">
-                {lastLines.map((l) => `${l.quantity} × ${itemsById.get(l.itemId)!.name}`).join(', ')}
+                {lastLines.map((l) => `${l.quantity} × ${lineName(l)}`).join(', ')}
               </p>
             </div>
             <Button size="md" variant="secondary" onClick={onOrderLast}>

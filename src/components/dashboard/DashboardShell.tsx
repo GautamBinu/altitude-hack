@@ -1,4 +1,4 @@
-import { ClipboardList, LogOut, Megaphone, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { ClipboardCheck, ClipboardList, LogOut, Megaphone, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { NavLink, Navigate, Outlet } from 'react-router'
 import { cx } from '../../lib/cx'
 import { useStaff } from '../../state/staff'
@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Orders', icon: ClipboardList, end: true },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/promotions', label: 'Promos', icon: Megaphone, adminOnly: true },
+  { to: '/dashboard/review', label: 'Review', icon: ClipboardCheck, adminOnly: true },
 ]
 
 export function DashboardShell() {

@@ -254,6 +254,8 @@ CREATE TABLE IF NOT EXISTS creations (
   submit_status TEXT NOT NULL DEFAULT 'none',
   reject_reason TEXT,
   submitted_at  TEXT,
+  decided_at    TEXT,
+  is_sample     INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_creations_user ON creations (user_id);
@@ -365,6 +367,8 @@ export function migrate(): void {
   ensureColumn('order_items', 'creation', 'TEXT')
   ensureColumn('order_items', 'kind', `TEXT NOT NULL DEFAULT 'drink'`)
   ensureColumn('order_items', 'category_slug', 'TEXT')
+  ensureColumn('creations', 'decided_at', 'TEXT')
+  ensureColumn('creations', 'is_sample', 'INTEGER NOT NULL DEFAULT 0')
 }
 
 /** Run a function inside one SQLite transaction. Rolls back if it throws. */

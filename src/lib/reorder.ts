@@ -1,4 +1,4 @@
-import type { MenuItem, OrderLineView } from '@shared/types'
+import type { CreationConfig, MenuItem, OrderLineView } from '@shared/types'
 import { defaultSelections, type Selections } from './pricing'
 
 /**
@@ -20,10 +20,13 @@ export interface ReorderLine {
   quantity: number
   selections?: Record<string, number[]> | null
   note?: string | null
+  /** A coffee from the builder. Put back as it was; checkout says if something in it has gone. */
+  creation?: (CreationConfig & { name: string }) | null
 }
 
 interface CartApi {
   add: (item: MenuItem, selections: Selections, note: string, quantity: number) => void
+  addCreation: (creation: CreationConfig & { name: string }, quantity: number) => void
 }
 
 /** Adds earlier lines to the cart. Returns how many went in and how many could not (sold out or gone). */
@@ -31,6 +34,11 @@ export function reorder(lines: (ReorderLine | OrderLineView)[], itemsById: Map<n
   let added = 0
   let skipped = 0
   for (const line of lines) {
+    if (line.creation) {
+      cart.addCreation(line.creation, Math.max(1, line.quantity))
+      added++
+      continue
+    }
     const item = line.itemId != null ? itemsById.get(line.itemId) : undefined
     if (!item || item.soldOut) {
       skipped++

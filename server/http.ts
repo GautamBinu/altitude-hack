@@ -31,8 +31,13 @@ const limiterDefaults = {
   },
 }
 
+/*
+ * Limits are per address and meant to stop a runaway script, not a busy room. A whole campus can share one
+ * public address, so they are set well above what a hundred students ordering at once would use.
+ */
+
 /** Sign-in endpoints. */
-export const authLimiter = rateLimit({ ...limiterDefaults, windowMs: 15 * 60 * 1000, limit: 40 })
+export const authLimiter = rateLimit({ ...limiterDefaults, windowMs: 15 * 60 * 1000, limit: 300 })
 
 /** Dashboard password attempts. Successful logins do not count against the limit. */
 export const staffLoginLimiter = rateLimit({
@@ -43,19 +48,41 @@ export const staffLoginLimiter = rateLimit({
 })
 
 /** Quoting and placing orders. */
-export const orderLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 120 })
+export const orderLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 1500 })
+
+/** Saving, sharing and favouriting. Writes only, so a runaway client cannot fill the table. */
+export const builderLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 600 })
 
 /** The mood suggester. Each request may cost a model call, so it is limited per address. */
-export const moodLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 40 })
+export const moodLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 200 })
 
 /* ---------- Schemas ---------- */
 
-const orderLine = z.object({
-  itemId: z.number().int().positive(),
-  quantity: z.number().int().min(1).max(20),
-  selections: z.record(z.string().regex(/^\d+$/), z.array(z.number().int().positive()).max(30)).default({}),
-  note: z.string().max(280).optional(),
+const id = z.number().int().positive()
+const optionalId = id.nullable().optional()
+
+/** A recipe from the coffee builder. Only ids and a name: the price is worked out on the server. */
+export const creationSchema = z.object({
+  name: z.string().min(1, 'Give your creation a name.').max(80),
+  baseId: id,
+  temperature: z.enum(['hot', 'iced']),
+  milkOptionId: optionalId,
+  flavourId: optionalId,
+  extraShots: z.number().int().min(0).max(2).default(0),
+  sweetnessId: optionalId,
+  toppingId: optionalId,
 })
+
+/** A menu item with its choices, or a builder creation. Exactly one of the two. */
+const orderLine = z
+  .object({
+    itemId: id.optional(),
+    quantity: z.number().int().min(1).max(20),
+    selections: z.record(z.string().regex(/^\d+$/), z.array(z.number().int().positive()).max(30)).default({}),
+    note: z.string().max(280).optional(),
+    creation: creationSchema.optional(),
+  })
+  .refine((line) => (line.itemId != null) !== (line.creation != null), { message: 'Each line is either a menu item or a creation.' })
 
 export const quoteSchema = z.object({
   lines: z.array(orderLine).min(1, 'Your order is empty.').max(30),
