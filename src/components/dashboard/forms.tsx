@@ -165,7 +165,7 @@ export function ConfirmDelete({ label = 'Delete', confirmText, onConfirm, busy }
 }
 
 /** Pick a picture, shrink it in the browser, upload it, and keep its address. */
-export function ImagePicker({ label, value, onChange, folder, helper }: { label: string; value: string | null; onChange: (url: string | null) => void; folder: 'menu' | 'promo'; helper?: string }) {
+export function ImagePicker({ label, value, onChange, folder, helper }: { label: string; value: string | null; onChange: (url: string | null) => void; folder: 'menu' | 'promo' | 'events'; helper?: string }) {
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

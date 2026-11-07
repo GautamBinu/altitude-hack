@@ -9,6 +9,7 @@ import { adminMenuRoutes } from './routes/adminMenu'
 import { authRoutes } from './routes/auth'
 import { builderRoutes } from './routes/builder'
 import { dashboardRoutes } from './routes/dashboard'
+import { eventRoutes } from './routes/events'
 import { homeRoutes } from './routes/home'
 import { meRoutes } from './routes/me'
 import { moodRoutes } from './routes/mood'
@@ -55,7 +56,7 @@ app.use(cookieParser())
 // Pictures uploaded from the dashboard and by event organisers. Names are random, so they can be cached for good.
 app.use('/uploads', express.static(config.uploadDir, { maxAge: '30d', immutable: true, index: false, fallthrough: true }))
 
-app.use('/api', originGuard, publicRoutes, authRoutes, homeRoutes, moodRoutes, builderRoutes, meRoutes, orderRoutes, dashboardRoutes, adminMenuRoutes)
+app.use('/api', originGuard, publicRoutes, authRoutes, homeRoutes, moodRoutes, builderRoutes, eventRoutes, meRoutes, orderRoutes, dashboardRoutes, adminMenuRoutes)
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found.', code: 'not_found' })
 })

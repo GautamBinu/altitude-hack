@@ -176,3 +176,34 @@ left a choice open, the choice and the reason are written down so the team can c
   minutes). A campus can share one public address, and the first values would have locked out a classroom.
 - **Not done here.** The cup is an illustration drawn from the options' colours, not a photograph. There is no "surprise me"
   button on the builder. Dashboard Review for events is added in Part 7 on the same screen.
+
+## Part 7: events and clubs hub
+
+- **Public feed** (`/events`): approved posts only, with Upcoming and Past tabs and a club filter. An event stays "upcoming" for 3 hours
+  after it starts, so tonight's event is still on the feed tonight. A post with no date counts as recent for 30 days. Each card has
+  the club, when and where, a short plain-text preview, and an "I'm interested" button with a count. Events without a picture put
+  their date on the card's ridge. Home shows the next three and links to the page.
+- **"I'm interested"** needs no sign-in. A signed-in person counts once by account; a guest counts once by a random cookie
+  (`alt_viewer`) that holds no personal data. Clearing cookies would let a guest count twice. That is the cost of not forcing
+  sign-in and is fine for a count on a campus feed.
+- **Anyone can submit** (`/events/new`), signed in or not. Signed-in people post under their first name; guests give a name that only the
+  team sees. The post is saved as pending and nobody else can see it, not even through its address. The sender sees "Pending review"
+  under Your posts on the events page: a signed-in person by account, a guest by a private token kept in the browser (stored hashed on
+  the server). They can take back a post that is pending or turned down. Once it is public only the team can take it down.
+- **Spam and abuse controls**, all server-side: 40 accepted posts per hour per address (failed attempts do not count, and the limit is
+  high because a whole campus can share one address); at most 3 posts waiting per signed-in person, 2 per guest device, 60 overall;
+  title 80, club 60, place 80, text 4,000 characters; at most 5 links; a hidden form field that a script fills in and a person never
+  does (the post looks accepted but nothing is kept); the cover picture is checked by its first bytes, limited to 1.2 MB and saved
+  under a random name; events must be dated today or later and within a year, on the shop's clock.
+- **Markdown without HTML.** Posts are stored as typed. `shared/markdown.ts` turns text into a small tree (paragraphs, headings, lists, bold,
+  italic, links) and the browser draws it as React elements, which escape every character. There is no `dangerouslySetInnerHTML` and no
+  HTML parser, so `<script>` shows as text. Only http and https addresses become links, and they open with `nofollow ugc`. Tests cover
+  script tags, `javascript:` and `data:` links, link labels that hide a different address, and deeply nested input.
+- **Review** (dashboard, admin only) now has two tabs. Events and posts: the pending post is shown as the public will see it (cover, details
+  rendered) with who sent it and whether they were signed in. Approve, Edit first (title, club, date and time, place, text, picture), or
+  Turn down with a reason the sender sees. Approved posts can be edited, taken down and published again. Coffees from Part 6 is the
+  second tab. The review tab opens on whichever has something waiting.
+- **Samples.** The five sample clubs are invented and carry a "Sample" label, with one sample post left pending to show the queue. They can
+  be taken down in Review.
+- **Not done.** Authors cannot edit a post after sending it (they take it back and send it again). There is no notification to the sender when
+  the team decides; Part 9 adds push notifications for orders only. Guests cannot recover a post's status on another device.

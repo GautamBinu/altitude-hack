@@ -42,7 +42,7 @@ const fils = z.number().int().min(0).max(1_000_000)
 const dateText = z.string().max(40).nullable()
 
 adminMenuRoutes.post('/dashboard/uploads', requireAdmin, (req, res) => {
-  const body = parse(z.object({ dataUrl: z.string().max(1_800_000), folder: z.enum(['menu', 'promo']) }), req.body)
+  const body = parse(z.object({ dataUrl: z.string().max(1_800_000), folder: z.enum(['menu', 'promo', 'events']) }), req.body)
   res.status(201).json({ url: saveImageDataUrl(body.dataUrl, body.folder) })
 })
 

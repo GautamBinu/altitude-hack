@@ -53,6 +53,16 @@ export const orderLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 
 /** Saving, sharing and favouriting. Writes only, so a runaway client cannot fill the table. */
 export const builderLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 600 })
 
+/**
+ * Sending a post to the events feed. Open to guests, so it is the spam target. Only posts that were accepted
+ * count, so a typo in the form never uses up someone's allowance. Per-person caps on posts waiting for
+ * review (3 signed in, 2 per guest device, 60 overall) do the finer work.
+ */
+export const eventLimiter = rateLimit({ ...limiterDefaults, windowMs: 60 * 60 * 1000, limit: 40, skipFailedRequests: true })
+
+/** "I'm interested", checking on a post, withdrawing one. */
+export const interestLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 600 })
+
 /** The mood suggester. Each request may cost a model call, so it is limited per address. */
 export const moodLimiter = rateLimit({ ...limiterDefaults, windowMs: 10 * 60 * 1000, limit: 200 })
 

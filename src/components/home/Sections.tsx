@@ -1,9 +1,11 @@
 import { describeSelections } from '@shared/modifiers'
 import type { HomeBanner, HomeEvent, MenuItem, UsualResponse } from '@shared/types'
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
+import { eventWhen } from '../../lib/format'
 import { CommunityBoard, useCommunity } from '../builder/Community'
 import { Button, LinkButton } from '../ui/Button'
+import { StatusChip } from '../ui/Chip'
 import { inputClass } from '../ui/Fields'
 import { selectionsFor } from '../../lib/reorder'
 
@@ -62,13 +64,6 @@ export function MoodEntry() {
       </form>
     </section>
   )
-}
-
-/** "Tue 10 Nov, 17:00" in the viewer's clock. */
-export function eventWhen(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return `${d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
 }
 
 interface UsualProps {
@@ -160,16 +155,24 @@ export function EventsPreview({ events }: { events: HomeEvent[] }) {
       </h2>
       <ul className="mt-3 divide-y divide-line border-y border-line">
         {events.map((event) => (
-          <li key={event.id} className="py-3">
-            <p className="text-title font-semibold leading-snug">{event.title}</p>
-            <p className="text-body-sm text-muted">
-              {event.club}
-              {event.startsAt ? ` · ${eventWhen(event.startsAt)}` : ''}
-              {event.place ? ` · ${event.place}` : ''}
-            </p>
+          <li key={event.id}>
+            <Link to={`/events/${event.id}`} className="block min-h-14 py-3 transition-colors hover:bg-surface">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-title font-semibold leading-snug">
+                {event.title}
+                {event.isSample && <StatusChip>Sample</StatusChip>}
+              </span>
+              <span className="block text-body-sm text-muted">
+                {event.club}
+                {event.startsAt ? ` · ${eventWhen(event.startsAt)}` : ''}
+                {event.place ? ` · ${event.place}` : ''}
+              </span>
+            </Link>
           </li>
         ))}
       </ul>
+      <Link to="/events" className="mt-2 inline-flex min-h-11 items-center text-body font-semibold text-ink underline underline-offset-4">
+        All events and clubs
+      </Link>
     </section>
   )
 }

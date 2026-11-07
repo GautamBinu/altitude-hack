@@ -7,7 +7,9 @@ import { StatusChip } from '../../components/ui/Chip'
 import { Sheet } from '../../components/ui/Sheet'
 import { ErrorState } from '../../components/ui/States'
 import { useToast } from '../../components/ui/Toast'
-import { TextInput, useSaver } from '../../components/dashboard/forms'
+import { Tabs, TextInput, useSaver } from '../../components/dashboard/forms'
+import type { ModerationQueue } from '@shared/events'
+import { EventReview } from './EventReview'
 import { api, ApiError, errorMessage } from '../../lib/api'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
 
@@ -165,16 +167,22 @@ function DecidedRow({ creation, onChanged }: { creation: Creation; onChanged: ()
   )
 }
 
-/** Community coffees waiting for a yes or no, and the ones already decided. */
+/** Everything customers and clubs have sent in that needs a person to say yes or no. */
 export function ModerationPage() {
   useDocumentTitle('Review')
   const [queue, setQueue] = useState<Queue | null>(null)
+  const [posts, setPosts] = useState<ModerationQueue | null>(null)
   const [error, setError] = useState<{ message: string; offline: boolean } | null>(null)
+  const [tab, setTab] = useState<'events' | 'coffees' | null>(null)
 
   const load = useCallback(async () => {
     try {
-      setQueue(await api<Queue>('/dashboard/creations'))
+      const [coffees, events] = await Promise.all([api<Queue>('/dashboard/creations'), api<ModerationQueue>('/dashboard/posts')])
+      setQueue(coffees)
+      setPosts(events)
       setError(null)
+      // Open on whichever has something waiting, events first.
+      setTab((current) => current ?? (events.pending.length === 0 && coffees.pending.length > 0 ? 'coffees' : 'events'))
     } catch (e) {
       setError({ message: errorMessage(e), offline: e instanceof ApiError && e.isOffline })
     }
@@ -189,16 +197,32 @@ export function ModerationPage() {
   return (
     <div className="max-w-3xl">
       <h1 className="text-display-lg font-bold">Review</h1>
-      <p className="mt-1 text-body text-muted">Coffees customers have shared. Approve to put one on the board, or turn it down with a reason.</p>
+      <p className="mt-1 text-body text-muted">What clubs and customers have sent in. Nothing is public until you approve it.</p>
 
       {error && !queue && <ErrorState className="mt-6" title="The list didn't load" message={error.message} offline={error.offline} onRetry={() => void load()} />}
-      {!queue && !error && (
+      {(!queue || !posts) && !error && (
         <div role="status" className="mt-6">
           <LoadingLine label="Loading" />
         </div>
       )}
 
-      {queue && (
+      {queue && posts && tab && (
+        <div className="mt-6">
+          <Tabs
+            label="What to review"
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { key: 'events', label: 'Events and posts', count: posts.pending.length },
+              { key: 'coffees', label: 'Coffees', count: queue.pending.length },
+            ]}
+          />
+        </div>
+      )}
+
+      {queue && posts && tab === 'events' && <EventReview queue={posts} onChanged={() => void load()} />}
+
+      {queue && tab === 'coffees' && (
         <>
           <section aria-labelledby="pending-heading" className="mt-8">
             <h2 id="pending-heading" className="mb-3 flex items-baseline justify-between text-headline font-semibold">

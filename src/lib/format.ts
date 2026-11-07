@@ -25,6 +25,13 @@ export function shortDateTime(iso: string): string {
   return `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${time}`
 }
 
+/** "Tue 10 Nov, 17:00" in the viewer's clock. */
+export function eventWhen(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+}
+
 export function pluralise(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`
 }

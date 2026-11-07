@@ -282,6 +282,7 @@ CREATE TABLE IF NOT EXISTS posts (
   author_user_id INTEGER,
   author_name   TEXT NOT NULL,
   manage_token  TEXT,
+  viewer_key    TEXT,
   is_sample     INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL,
   decided_at    TEXT
@@ -367,6 +368,7 @@ export function migrate(): void {
   ensureColumn('order_items', 'creation', 'TEXT')
   ensureColumn('order_items', 'kind', `TEXT NOT NULL DEFAULT 'drink'`)
   ensureColumn('order_items', 'category_slug', 'TEXT')
+  ensureColumn('posts', 'viewer_key', 'TEXT')
   ensureColumn('creations', 'decided_at', 'TEXT')
   ensureColumn('creations', 'is_sample', 'INTEGER NOT NULL DEFAULT 0')
 }

@@ -25,7 +25,7 @@ export async function resizeToDataUrl(file: File, maxEdge = 1200, maxBytes = 900
 }
 
 /** Resize and upload from the dashboard. Returns the picture's address on this server. */
-export async function uploadDashboardImage(file: File, folder: 'menu' | 'promo'): Promise<string> {
+export async function uploadDashboardImage(file: File, folder: 'menu' | 'promo' | 'events'): Promise<string> {
   const dataUrl = await resizeToDataUrl(file)
   const res = await api<{ url: string }>('/dashboard/uploads', { body: { dataUrl, folder } })
   return res.url

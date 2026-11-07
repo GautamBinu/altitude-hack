@@ -1,4 +1,4 @@
-import { ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag, User } from 'lucide-react'
+import { CalendarDays, ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag, User } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { cx } from '../../lib/cx'
 import { useCart } from '../../state/cart'
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/menu', label: 'Menu', icon: Coffee, end: false },
   { to: '/orders', label: 'Orders', icon: ClipboardList, end: false },
+  { to: '/events', label: 'Events', icon: CalendarDays, end: false },
   { to: '/profile', label: 'Profile', icon: User, end: false },
 ] as const
 

@@ -13,6 +13,9 @@ import { LoyaltyPage } from './pages/customer/LoyaltyPage'
 import { ProfilePage } from './pages/customer/ProfilePage'
 import { MenuPage } from './pages/customer/MenuPage'
 import { BuilderPage } from './pages/customer/BuilderPage'
+import { EventPage } from './pages/customer/EventPage'
+import { EventsPage } from './pages/customer/EventsPage'
+import { SubmitEventPage } from './pages/customer/SubmitEventPage'
 import { MoodPage } from './pages/customer/MoodPage'
 import { OrderPage } from './pages/customer/OrderPage'
 import { OrdersPage } from './pages/customer/OrdersPage'
@@ -111,6 +114,9 @@ export function App() {
               <Route path="menu" element={<MenuPage />} />
               <Route path="mood" element={<MoodPage />} />
               <Route path="build" element={<BuilderPage />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="events/new" element={<SubmitEventPage />} />
+              <Route path="events/:id" element={<EventPage />} />
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="orders/:id" element={<OrderPage />} />
