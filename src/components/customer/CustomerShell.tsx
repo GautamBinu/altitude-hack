@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, ClipboardList, Coffee, House, LogOut, ShoppingBag, SlidersHorizontal, User } from 'lucide-react'
+import { CalendarDays, ChevronRight, ClipboardList, Coffee, CloudSun, House, LogOut, ShoppingBag, SlidersHorizontal, User } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { cx } from '../../lib/cx'
 import { useCart } from '../../state/cart'
@@ -18,17 +18,23 @@ interface NavEntry {
   /** The full name, shown as a tooltip when the label is shortened. */
   title?: string
   icon: typeof House
+  /** Left out of the phone tab bar, which has no room for it. The rail shows it. */
+  railOnly?: boolean
   end: boolean
 }
 
 const NAV: readonly NavEntry[] = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/menu', label: 'Menu', icon: Coffee, end: false },
+  { to: '/mood', label: 'Mood', title: 'What are you in the mood for?', icon: CloudSun, end: false, railOnly: true },
   { to: '/build', label: 'Create your own', short: 'Create', title: 'Create your own coffee', icon: SlidersHorizontal, end: false },
   { to: '/orders', label: 'Orders', icon: ClipboardList, end: false },
   { to: '/events', label: 'Events', icon: CalendarDays, end: false },
   { to: '/profile', label: 'Profile', icon: User, end: false },
 ]
+
+/** The phone tab bar has room for six tabs at 375px, so entries marked railOnly are left out of it. */
+const TAB_NAV = NAV.filter((n) => !n.railOnly)
 
 function CartLink({ className }: { className?: string }) {
   const { count } = useCart()
@@ -98,7 +104,7 @@ function Rail() {
           <Logo variant="mark" height={34} />
         </Link>
       </div>
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-1 px-3">
+      <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
         {NAV.map(({ to, label, short, title, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -191,8 +197,8 @@ function TabBar() {
   const { active } = useOrders()
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
-      <ul className="grid" style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}>
-        {NAV.map(({ to, label, short, icon: Icon, end }) => (
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${TAB_NAV.length}, minmax(0, 1fr))` }}>
+        {TAB_NAV.map(({ to, label, short, icon: Icon, end }) => (
           <li key={to}>
             <NavLink
               to={to}

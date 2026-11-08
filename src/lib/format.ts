@@ -40,3 +40,28 @@ export function pluralise(count: number, singular: string, plural = `${singular}
 export function pageTitle(title?: string): string {
   return title ? `${title} | Altitude` : 'Altitude'
 }
+
+/** 40 -> "40 s", 95 -> "1 min 35 s", 600 -> "10 min". Null when there is nothing to show. */
+export function durationLabel(seconds: number | null): string {
+  if (seconds == null) return 'No data'
+  const total = Math.max(0, Math.round(seconds))
+  if (total < 60) return `${total} s`
+  const minutes = Math.floor(total / 60)
+  const rest = total % 60
+  return rest === 0 || minutes >= 10 ? `${minutes} min` : `${minutes} min ${rest} s`
+}
+
+/** A business date such as "2026-11-07" as "Sat 7 Nov", independent of the viewer's time zone. */
+export function businessDayLabel(date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
+
+/** 13 -> "13:00". */
+export function hourLabel(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`
+}
+
+/** 0.256 -> "26%". */
+export function percentLabel(fraction: number): string {
+  return `${Math.round(fraction * 100)}%`
+}

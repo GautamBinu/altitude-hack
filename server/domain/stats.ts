@@ -310,8 +310,5 @@ export function leastPopular(menuNames: string[], items: StatsItem[], limit = 5)
     .slice(0, limit)
 }
 
-/** Percent change from the previous period to this one. Null when there is nothing to compare with. */
-export function change(now: number | null, before: number | null): number | null {
-  if (now == null || before == null || before === 0) return null
-  return (now - before) / before
-}
+// The screen and the tests share one definition of "change since the previous period".
+export { change } from '../../shared/stats'

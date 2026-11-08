@@ -1,4 +1,4 @@
-import { ClipboardCheck, ClipboardList, LogOut, Megaphone, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { ChartColumn, ClipboardCheck, ClipboardList, LogOut, Megaphone, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { NavLink, Navigate, Outlet } from 'react-router'
 import { cx } from '../../lib/cx'
 import { useStaff } from '../../state/staff'
@@ -19,6 +19,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Orders', icon: ClipboardList, end: true },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
+  { to: '/dashboard/stats', label: 'Stats', icon: ChartColumn, adminOnly: true },
   { to: '/dashboard/promotions', label: 'Promos', icon: Megaphone, adminOnly: true },
   { to: '/dashboard/review', label: 'Review', icon: ClipboardCheck, adminOnly: true },
 ]
@@ -92,7 +93,7 @@ export function DashboardShell() {
       <nav data-chrome aria-label="Dashboard" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
         <ul className="flex overflow-x-auto [scrollbar-width:none]">
           {items.map(({ to, label, icon: Icon, end }) => (
-            <li key={to} className="min-w-20 flex-1">
+            <li key={to} className="min-w-16 flex-1">
               <NavLink
                 to={to}
                 end={end}

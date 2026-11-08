@@ -84,3 +84,9 @@ export interface StatsResponse {
   slowest: { name: string; avgSeconds: number; samples: number }[]
   leastPopular: { name: string; units: number }[]
 }
+
+/** Change from the previous period to this one, as a fraction (0.5 is up 50%). Null when there is nothing to compare with. */
+export function change(now: number | null, before: number | null): number | null {
+  if (now == null || before == null || before === 0) return null
+  return (now - before) / before
+}

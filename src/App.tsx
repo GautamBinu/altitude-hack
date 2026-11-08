@@ -1,8 +1,10 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react'
 import { BrowserRouter, Outlet, Route, Routes } from 'react-router'
 import { CustomerShell } from './components/customer/CustomerShell'
+import { AdminOnly } from './components/dashboard/AdminOnly'
 import { DashboardShell } from './components/dashboard/DashboardShell'
 import { Splash } from './components/Splash'
+import { LoadingLine } from './components/ui/Art'
 import { Button } from './components/ui/Button'
 import { ErrorState } from './components/ui/States'
 import { ToastProvider } from './components/ui/Toast'
@@ -32,6 +34,9 @@ import { MenuProvider } from './state/menu'
 import { OrdersProvider } from './state/orders'
 import { SessionProvider, useSession } from './state/session'
 import { StaffProvider } from './state/staff'
+
+// The charts library is large and only admins use it, so it loads when the Statistics screen is opened.
+const StatsPage = lazy(() => import('./pages/dashboard/StatsPage').then((m) => ({ default: m.StatsPage })))
 
 /** Everything the customer app shares: who is signed in, the menu, the cart and live orders. */
 function CustomerApp() {
@@ -130,8 +135,24 @@ export function App() {
               <Route element={<DashboardShell />}>
                 <Route index element={<QueuePage />} />
                 <Route path="menu" element={<MenuManagerPage />} />
-                <Route path="promotions" element={<PromotionsPage />} />
-                <Route path="review" element={<ModerationPage />} />
+                <Route
+                  path="stats"
+                  element={
+                    <AdminOnly>
+                      <Suspense
+                        fallback={
+                          <div role="status" className="mt-8">
+                            <LoadingLine label="Loading statistics" />
+                          </div>
+                        }
+                      >
+                        <StatsPage />
+                      </Suspense>
+                    </AdminOnly>
+                  }
+                />
+                <Route path="promotions" element={<AdminOnly><PromotionsPage /></AdminOnly>} />
+                <Route path="review" element={<AdminOnly><ModerationPage /></AdminOnly>} />
               </Route>
             </Route>
 

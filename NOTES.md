@@ -212,7 +212,7 @@ left a choice open, the choice and the reason are written down so the team can c
 
 - **Side navigation.** "Create your own" sits right after Menu in the customer side rail (icon: sliders). On the narrow rail and the
   phone tab bar the label shortens to "Create" so six tabs still fit at 375 px; the tooltip and screen-reader label read
-  "Create your own coffee". The full phrase would wrap in the 232 px rail.
+  "Create your own coffee". The full phrase would wrap in the 232 px rail. "Mood" (tooltip: "What are you in the mood for?") is in the tablet and desktop rail between Menu and Create your own. It is left out of the phone tab bar, which is full at six tabs. Phones reach it from the box on Home and the link at the top of Menu.
 - **Gemini.** `server/domain/gemini.ts` calls the Generative Language REST API (`models/{model}:generateContent`). The key goes in the
   `x-goog-api-key` header, never the URL, so it cannot end up in a log line. The reply is asked for as JSON with a schema. No
   temperature is sent, because current Gemini models ignore it or warn. Thinking is kept low so the answer comes back fast. A 400
@@ -234,3 +234,20 @@ left a choice open, the choice and the reason are written down so the team can c
   rejects a fake client ID as expected, and a forged token is rejected with 401. Run `npm run check:setup` once real keys are in.
 - **Rate limits** were raised for the campus network, where many students share one address: sign-in 300 per 15 minutes, orders 1500
   per 10 minutes, mood 200 per 10 minutes, builder writes 600 per 10 minutes, event submissions 40 per hour (successful ones only).
+
+## Part 8: statistics
+
+- **Who sees it.** Admins only, under Stats in the dashboard. The server refuses anyone else, and a barista who follows a link is sent back to the queue.
+- **Definitions** (written next to the code in `server/domain/stats.ts`, with tests):
+  - Revenue is money from paid orders that were not cancelled. Orders counts every order that was not cancelled, including cash orders still waiting to be paid. Average order is revenue divided by paid orders.
+  - Time to make runs from "started" to "ready". Wait to start runs from joining the queue (confirmed, or the due time for a pre-order) to "started". Late orders is the share of finished orders that were late, using the same rule as the queue screen.
+  - Comparison: Today is compared with yesterday up to the same time of day. 7 days and 30 days are compared with the equal period just before. When that earlier period has no orders (the seed only reaches back 30 days, and a new shop has none) the screen says so once under the numbers instead of on every tile.
+  - New and returning shows orders, not customers: a customer's first-ever order against all repeat orders, with how many customers are new and how many came from before the period. A customer-based bar read 100% new and 0% returning on the 30-day view, because every seeded customer started inside those 30 days.
+  - Orders waiting to be started is sampled every five minutes and shown in half-hour steps from 07:00 to 22:00: the solid line is the average day, the dashed line is the worst day.
+  - Slowest to make uses single-drink, single-quantity orders only, and an item needs three of them to be listed. Least popular includes items that did not sell at all.
+  - Points issued is compared with the previous period. Customers by tier is where everyone sits today, not at the end of the period.
+- **Charts** use recharts, loaded only when the screen is opened (its own chunk, about 400 kB, 115 kB compressed). Colours come from the theme variables, so light and dark follow automatically. The accent marks the leading series (the busiest hour, the first row of a ranking) and everything else is muted. No legends, no animation. Each chart has a one-line summary above it, a spoken summary, and a hidden table of the same numbers for screen readers.
+- **CSV** downloads come in three kinds: Summary, Orders and Items, for the range on screen. Files open in Excel with correct characters, and any cell that starts with =, +, - or @ is prefixed so a spreadsheet cannot run it as a formula. Orders includes cancelled ones with their status. Items leaves them out.
+- **Dependency fix.** recharts needs `react-is` as a peer package, and npm did not install it, so the first visit to the screen failed with "Failed to resolve import react-is". It is now listed in package.json.
+- **Dashboard bottom bar.** Tabs got a smaller minimum width so five fit at 375 px. More than that scrolls sideways.
+- **Checked** in Edge at 375, 768 and 1440 px wide, dark and light, from a production build, with no console errors and no sideways scrolling. Not checked in Safari or Firefox.
