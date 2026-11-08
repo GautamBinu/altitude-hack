@@ -38,9 +38,11 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <h1 className="text-display-lg font-bold">Profile</h1>
 
+      <div className="xl:grid xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] xl:items-start xl:gap-16">
+      <div>
       <div className="mt-6 flex items-center gap-4">
         <Avatar name={user.firstName} />
         <div className="min-w-0">
@@ -55,6 +57,8 @@ export function ProfilePage() {
         </div>
       )}
 
+      </div>
+      <div className="xl:-mt-2">
       <FavouritesSection />
 
       <nav aria-label="Your things" className="mt-8 divide-y divide-line border-y border-line">
@@ -84,6 +88,8 @@ export function ProfilePage() {
         <LogOut size={18} strokeWidth={1.75} aria-hidden="true" />
         Sign out
       </Button>
+      </div>
+      </div>
     </div>
   )
 }

@@ -92,10 +92,11 @@ export function MoodPage() {
   const tooShort = text.trim().length < 2
 
   return (
-    <div className="mx-auto max-w-4xl pb-24 lg:pb-0">
+    <div className="pb-24 lg:pb-0">
       <h1 className="text-display-lg font-bold text-ink">What are you in the mood for?</h1>
       <p className="mt-2 max-w-xl text-body text-muted">Say it in your own words. We will pick three drinks from the menu.</p>
 
+      <div className="xl:grid xl:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] xl:items-start xl:gap-16">
       <form onSubmit={submit} className="mt-6">
         <label htmlFor="mood-text" className="mb-1.5 block text-body-sm font-semibold text-ink">
           Your mood
@@ -138,7 +139,14 @@ export function MoodPage() {
         </div>
       </form>
 
-      <div ref={resultsRef} className="mt-8 scroll-mt-20" aria-live="polite" aria-busy={result.status === 'loading'}>
+      <div ref={resultsRef} className="mt-8 scroll-mt-20 xl:mt-6" aria-live="polite" aria-busy={result.status === 'loading'}>
+        {result.status === 'idle' && (
+          <div className="hidden rounded-lg border border-dashed border-control px-8 py-16 xl:block">
+            <p className="text-title font-semibold text-ink">Your three picks show up here.</p>
+            <p className="mt-1 max-w-sm text-body text-muted">Write how you feel on the left, or tap one of the examples.</p>
+          </div>
+        )}
+
         {result.status === 'loading' && (
           <div role="status">
             <LoadingLine label="Looking through the menu" />
@@ -180,6 +188,7 @@ export function MoodPage() {
             )}
           </section>
         )}
+      </div>
       </div>
 
       <CartBar />

@@ -31,7 +31,7 @@ export function OrdersPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <h1 className="text-display-lg font-bold">Orders</h1>
 
       {!loaded ? (
@@ -64,7 +64,7 @@ export function OrdersPage() {
               <h2 id="earlier-heading" className="mb-2 text-headline font-semibold">
                 Earlier
               </h2>
-              <ul className="divide-y divide-line border-y border-line">
+              <ul className="divide-y divide-line border-y border-line xl:grid xl:grid-cols-2 xl:gap-x-12">
                 {earlier.map((order) => (
                   <li key={order.id} className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
                     <Link

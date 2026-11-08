@@ -149,7 +149,7 @@ export function MenuManagerPage() {
     : [{ key: 'items', label: 'Items' }]
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-display-lg font-bold">Menu</h1>
         {!isAdmin && <p className="text-body-sm text-muted">You can mark items sold out. An admin changes names and prices.</p>}
@@ -252,9 +252,9 @@ export function MenuManagerPage() {
                   {searching ? 'No items match.' : 'This category has no items yet.'}
                 </p>
               ) : (
-                <ul className="mt-4 divide-y divide-line border-y border-line">
+                <ul className="mt-4 divide-y divide-line border-y border-line xl:columns-2 xl:gap-x-10">
                   {visible.map(({ item, categoryName }, index) => (
-                    <li key={item.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+                    <li key={item.id} className="flex break-inside-avoid flex-wrap items-center gap-x-4 gap-y-2 py-3">
                       <Thumb item={item} />
                       <div className="min-w-0 flex-1 basis-48">
                         <p className="truncate text-title font-semibold leading-snug">{item.name}</p>

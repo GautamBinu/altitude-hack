@@ -38,7 +38,7 @@ function MenuSkeleton() {
   return (
     <div role="status" aria-live="polite">
       <LoadingLine label="Loading the menu" />
-      <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-3" aria-hidden="true">
+      <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-4" aria-hidden="true">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="h-60 animate-pulse rounded-lg border border-line bg-surface" />
         ))}
@@ -237,7 +237,7 @@ export function MenuPage() {
                   <h2 id={`cat-title-${category.slug}`} className="mb-4 text-headline font-semibold text-ink">
                     {category.name}
                   </h2>
-                  <ul className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+                  <ul className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-4">
                     {category.items.map((item) => (
                       <li key={item.id}>
                         <MenuItemCard item={item} onOpen={setSelected} />

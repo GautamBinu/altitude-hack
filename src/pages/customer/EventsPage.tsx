@@ -80,7 +80,7 @@ export function EventsPage() {
     setFeed((current) => (current ? { ...current, posts: current.posts.map((p) => (p.id === id ? { ...p, ...next } : p)) } : current))
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
           <h1 className="text-display-lg font-bold">Events and clubs</h1>
@@ -150,7 +150,7 @@ export function EventsPage() {
           </EmptyState>
         )}
         {feed && feed.posts.length > 0 && (
-          <ul className="grid gap-4">
+          <ul className="grid gap-4 xl:grid-cols-2">
             {feed.posts.map((post) => (
               <li key={post.id}>
                 <EventCard post={post} onChange={(next) => patch(post.id, next)} />

@@ -18,23 +18,18 @@ interface NavEntry {
   /** The full name, shown as a tooltip when the label is shortened. */
   title?: string
   icon: typeof House
-  /** Left out of the phone tab bar, which has no room for it. The rail shows it. */
-  railOnly?: boolean
   end: boolean
 }
 
 const NAV: readonly NavEntry[] = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/menu', label: 'Menu', icon: Coffee, end: false },
-  { to: '/mood', label: 'Mood', title: 'What are you in the mood for?', icon: CloudSun, end: false, railOnly: true },
+  { to: '/mood', label: 'Mood', title: 'What are you in the mood for?', icon: CloudSun, end: false },
   { to: '/build', label: 'Create your own', short: 'Create', title: 'Create your own coffee', icon: SlidersHorizontal, end: false },
   { to: '/orders', label: 'Orders', icon: ClipboardList, end: false },
   { to: '/events', label: 'Events', icon: CalendarDays, end: false },
   { to: '/profile', label: 'Profile', icon: User, end: false },
 ]
-
-/** The phone tab bar has room for six tabs at 375px, so entries marked railOnly are left out of it. */
-const TAB_NAV = NAV.filter((n) => !n.railOnly)
 
 function CartLink({ className }: { className?: string }) {
   const { count } = useCart()
@@ -197,8 +192,8 @@ function TabBar() {
   const { active } = useOrders()
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-safe md:hidden">
-      <ul className="grid" style={{ gridTemplateColumns: `repeat(${TAB_NAV.length}, minmax(0, 1fr))` }}>
-        {TAB_NAV.map(({ to, label, short, icon: Icon, end }) => (
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}>
+        {NAV.map(({ to, label, short, icon: Icon, end }) => (
           <li key={to}>
             <NavLink
               to={to}
@@ -206,14 +201,14 @@ function TabBar() {
               aria-label={short ? label : undefined}
               className={({ isActive }) =>
                 cx(
-                  'relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-body-sm font-semibold transition-colors',
+                  'relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-label font-semibold tracking-normal! transition-colors',
                   isActive ? 'text-ink' : 'text-muted',
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  {isActive && <span className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-accent" aria-hidden="true" />}
+                  {isActive && <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-accent" aria-hidden="true" />}
                   <span className="relative">
                     <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
                     {to === '/orders' && active.length > 0 && (
@@ -270,7 +265,7 @@ export function CustomerShell() {
       <div className="md:pl-22 lg:pl-58">
         <PhoneHeader />
         <MiniTracker />
-        <main id="main" className="mx-auto w-full max-w-300 px-4 pt-5 pb-28 md:px-8 md:pt-8 md:pb-14">
+        <main id="main" className="mx-auto w-full max-w-[110rem] px-4 pt-5 pb-28 md:px-8 md:pt-8 md:pb-14 lg:px-10 2xl:px-14">
           <Outlet />
         </main>
       </div>

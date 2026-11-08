@@ -195,7 +195,7 @@ export function ModerationPage() {
   }, [load])
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <h1 className="text-display-lg font-bold">Review</h1>
       <p className="mt-1 text-body text-muted">What clubs and customers have sent in. Nothing is public until you approve it.</p>
 
@@ -232,7 +232,7 @@ export function ModerationPage() {
             {queue.pending.length === 0 ? (
               <p className="rounded-lg border border-dashed border-control px-4 py-8 text-center text-body text-muted">Nothing is waiting. New shares from customers show up here.</p>
             ) : (
-              <ul className="grid gap-3">
+              <ul className="grid gap-3 xl:grid-cols-2">
                 {queue.pending.map((c) => (
                   <PendingCard key={c.id} creation={c} onChanged={() => void load()} />
                 ))}
@@ -245,7 +245,7 @@ export function ModerationPage() {
               <h2 id="decided-heading" className="mb-2 text-headline font-semibold">
                 Recently decided
               </h2>
-              <ul className="divide-y divide-line border-y border-line">
+              <ul className="divide-y divide-line border-y border-line xl:grid xl:grid-cols-2 xl:gap-x-12">
                 {queue.decided.map((c) => (
                   <DecidedRow key={c.id} creation={c} onChanged={() => void load()} />
                 ))}

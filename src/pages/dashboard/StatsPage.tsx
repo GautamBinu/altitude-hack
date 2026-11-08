@@ -70,7 +70,7 @@ export function StatsPage() {
   const body = stats && stats.range === range ? <Report stats={stats} /> : null
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div>
           <h1 className="text-display-lg font-bold">Statistics</h1>
@@ -145,7 +145,7 @@ function Report({ stats }: { stats: StatsResponse }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-4 md:gap-x-8">
+      <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-4 md:gap-x-8 2xl:grid-cols-8">
         <Kpi label="Revenue" delta={vsPrevious(k.revenueFils, p.revenueFils)}>
           {formatAedNumber(k.revenueFils)}
           <Unit>AED</Unit>

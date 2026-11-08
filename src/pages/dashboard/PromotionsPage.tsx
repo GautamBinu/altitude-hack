@@ -332,12 +332,14 @@ export function PromotionsPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <h1 className="text-display-lg font-bold">Promotions</h1>
-      <div className="mt-8 grid gap-14">
+      <div className="mt-8 grid gap-14 xl:grid-cols-2 xl:items-start xl:gap-x-20">
         <DrinkOfMonthSection key={`${promos.drink?.headline}-${promos.drink?.itemId}-${promos.drink?.endsAt}`} drink={promos.drink} menu={menu} onChanged={() => void load()} />
+        <div className="grid gap-14">
         <BannersSection banners={promos.banners} menu={menu} onChanged={() => void load()} />
         <CodesSection codes={promos.codes} onChanged={() => void load()} />
+        </div>
       </div>
     </div>
   )

@@ -42,7 +42,7 @@ export function LoyaltyPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <h1 className="text-display-lg font-bold">Rewards</h1>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start lg:gap-12">
@@ -123,7 +123,7 @@ export function LoyaltyPage() {
         {summary.history.length === 0 ? (
           <p className="text-body text-muted">Nothing yet. Points land here when you collect an order.</p>
         ) : (
-          <ul className="divide-y divide-line border-y border-line">
+          <ul className="divide-y divide-line border-y border-line xl:grid xl:grid-cols-2 xl:gap-x-12">
             {summary.history.map((entry) => (
               <li key={entry.id} className="flex min-h-14 items-center justify-between gap-4 py-3">
                 <div className="min-w-0">

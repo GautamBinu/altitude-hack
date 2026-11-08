@@ -279,7 +279,7 @@ export function EventReview({ queue, onChanged }: { queue: ModerationQueue; onCh
         {queue.pending.length === 0 ? (
           <p className="rounded-lg border border-dashed border-control px-4 py-8 text-center text-body text-muted">Nothing is waiting. Posts from the events page show up here.</p>
         ) : (
-          <ul className="grid gap-3">
+          <ul className="grid gap-3 xl:grid-cols-2">
             {queue.pending.map((p) => (
               <PendingCard key={p.id} post={p} onChanged={onChanged} />
             ))}
@@ -291,7 +291,7 @@ export function EventReview({ queue, onChanged }: { queue: ModerationQueue; onCh
           <h2 id="posts-decided" className="mb-2 text-headline font-semibold">
             Everything else
           </h2>
-          <ul className="divide-y divide-line border-y border-line">
+          <ul className="divide-y divide-line border-y border-line xl:grid xl:grid-cols-2 xl:gap-x-12">
             {queue.decided.map((p) => (
               <DecidedRow key={p.id} post={p} onChanged={onChanged} />
             ))}
